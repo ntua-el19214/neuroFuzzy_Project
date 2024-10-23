@@ -55,6 +55,24 @@ disp(['d(psi_ddot)/d(Fx_rr) = ', char(partial_psi_ddot_Fx_rr)]);
 %% Linear System used to design controller.
 % After we obtain the linear form of the system arround,
 %  b = 0 we can write the system in the dx/dt = Ax + Bu form
+m = 270;
+v = 15;
+bf = 1.22;
+br = 1.22;
+lf = 0.5*1.57;
+lr = 0.5*1.57;
+Jz = 75;
+
+delta = 0.1;
+Fx_fl = 500;
+Fx_fr = 500;
+Fx_rl = 500;
+Fx_rr = 500;
+
+Fy_fl = 500;
+Fy_fr = 500;
+Fy_rl = 500;
+Fy_rr = 500;
 a11 = (Fx_rl + Fx_rr - cos(- delta)*(Fx_fl + Fx_fr) + sin(- delta)*(Fy_fl + Fy_fr))/(m*v);
 a12 = -1/(m*v);
 
@@ -68,6 +86,14 @@ B = [-sin(-delta) -sin(-delta) 0 0;
 
 % C matrix
 C = [0 1];
+
+%% Expand state space linear model & Design controller
+A_ex = [A [0; 0] ; C 0];
+B_ex = [B;[0 0 0 0]];
+
+Q = diag([1/(deg2rad(30))^2 1 100]);
+R = 1/2000*eye(4);
+K = icare(A_ex, B_ex, Q, R);
 
 %% Next step: Construct a delta steering input to parse into the system
 
