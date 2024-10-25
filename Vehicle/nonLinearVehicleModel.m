@@ -1,6 +1,13 @@
-function x_dot = nonLinearVehicleModel(t, Y, vehicle, delta)
+function x_dot = nonLinearVehicleModel(t, Y, vehicle, delta, ssVectorSA, ExpandedMatrices)
 %NONLINEARVEHICLEMODEL describes the non linear equations that dictate
 %vehicle dynamics
+
+% Initialize integral term for yaw control
+persistent integral_yaw_error
+if isempty(integral_yaw_error)
+    integral_yaw_error = 0;
+end
+
 v        = Y(1);    
 b        = Y(2);   
 psi_dot  = Y(3);
@@ -62,7 +69,7 @@ v_dot = 1/m * ((Fx_fl + Fx_fr) * cos(delta - b) ...
                  - (Fy_fl + Fy_fr) * sin(delta - b) ...
                  + (Fx_rl + Fx_rr) * cos(b) ...
                  + (Fy_rl + Fy_rr) * sin(b) ...
-                 + F_Drag * cos(b));
+                 - F_Drag * cos(b));
 
 % β_dot
 beta_dot = (1/m/v) * ((Fx_fl + Fx_fr) * sin(delta - b) ...
@@ -77,6 +84,21 @@ psi_ddot = (1/Jz) * (lf * ((Fx_fl + Fx_fr) * sin(delta) + (Fy_fl + Fy_fr) * cos(
                     + bf/2 * (-Fx_fl + Fx_fr) * cos(delta) ...
                     - (-Fy_fl + Fy_fr) * sin(delta) ...
                     + br/2 * (Fx_rr - Fx_rl));
+
+%% Calculate Motor Torque
+psi_dot_desired = v*delta/(lf+lr);
+
+yaw_error = psi_dot_desired - psi_dot; % Calculate yaw error
+integral_yaw_error = integral_yaw_error + yaw_error * t; % Update integral error
+
+gainStruct = gainScheduling(delta, ssVectorSA, ExpandedMatrices);
+input = yaw_error*gainStruct.Kp + integral_yaw_error*gainStruct.Ki - gainStruct.Kr*[b, psi_dot];
+slipAngleMatrix = [slipAngle_FL, slipAngle_FR, slipAngle_RL, slipAngle_RR];
+fzMatrix        = [Fz_fl, Fz_fr, Fz_rl, Fz_rr];
+omegaMatrix     = [omega_FL, omega_FR, omega_RL, omega_RR];
+
+Tmotor = motorTorque(vehicle, input, slipAngleMatrix ,fzMatrix, omegaMatrix);
+
 % Wheel accelerations
 omega_FL_dot = (Tmotor(1) - Fx_fl*vehicle.Rt)/vehicle.Jw;
 omega_FR_dot = (Tmotor(2) - Fx_fr*vehicle.Rt)/vehicle.Jw;

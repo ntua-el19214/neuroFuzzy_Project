@@ -86,6 +86,7 @@ h = histogram2(steeringAngleRad, V, [30 30],'FaceColor','flat');
 % their symmetrics.
 
 % Define the data for each operating point
+% Operating points were chosen from the previous histogram
 % First operating point
 vSS1 = (6.66 + 7.4) / 2;
 bSS1 = 0;
@@ -170,14 +171,17 @@ for i = 1:5
     E(4) = Fx_fr == Fx_rr;
 
     solution = solve(E, [Fx_fl Fx_fr Fx_rl Fx_rr], 'ReturnConditions', true);
-    % Solve the equations
-    % if delta ~=0
-    %     solution = solve(E, [Fx_fl Fx_fr Fx_rl Fx_rr], 'ReturnConditions', true);
-    % else
-    %     solution = solve(E, [Fx_fl Fx_fr], 'ReturnConditions', true);
-    % end
-    % Store the solution for this operating point
-    solutions{i} = solution;
+    if delta~=0
+        solutions{i}.Fx_fl =double(solution.Fx_fl);
+        solutions{i}.Fx_fr =double(solution.Fx_fr);
+        solutions{i}.Fx_rl =double(solution.Fx_rl);
+        solutions{i}.Fx_rr =double(solution.Fx_rr);
+    else 
+        solutions{i}.Fx_fl = 100;
+        solutions{i}.Fx_fr = 100;
+        solutions{i}.Fx_rl = 100;
+        solutions{i}.Fx_rr = 100;
+    end
 
     % Evaluate and display the solution
     disp(['Operating Point ', num2str(i), ':']);
@@ -233,13 +237,54 @@ for i = 1:5
     Matrices(i).C = C;
 end
 %% Expand state space linear model & Design controller
-A_ex = [A [0; 0] ; C 0];
-B_ex = [B;[0 0 0 0]];
+% Given symbolic variables for state-space expansion
+syms x1 x2 real % Assuming x1 and x2 represent the states
 
-Q = diag([1/(deg2rad(30))^2 1 100]);
-R = 1/2000*eye(4);
-K = icare(A_ex, B_ex, Q, R);
+% Initialize a variable to store expanded matrices for each operating point
+ExpandedMatrices = struct('A_ex', {}, 'B_ex', {}, 'Kr', {}, 'Ki', {}, 'Kp', {});
 
+% Loop through each operating point to compute expanded matrices and controller gain
+for i = 1:5
+    % Retrieve the matrices from the previously calculated results
+    A = Matrices(i).A;
+    B = Matrices(i).B;
+    C = Matrices(i).C;
+
+    % Expand A matrix to A_ex
+    A_ex = [A [0; 0]; C 0];
+
+    % Expand B matrix to B_ex
+    B_ex = [B; [0 0 0 0]];
+
+    % Define the weights for the cost function
+    Q = diag([1/(deg2rad(30))^2 1 5]); % Adjust weights as necessary
+    R = 1/2000 * eye(4); % Adjust R matrix size if needed
+
+    % Calculate the controller gain using icare
+    [~, K, ~] = icare(A_ex, B_ex, Q, R);
+
+    pScaleFactor = 0.2;
+    % Store the expanded matrices and controller gain in the structure
+    ExpandedMatrices(i).A_ex = A_ex;
+    ExpandedMatrices(i).B_ex = B_ex;
+    ExpandedMatrices(i).Kr = [K(:,1) K(:,2)*(1-pScaleFactor)];
+    ExpandedMatrices(i).Ki = -K(:,3);
+    ExpandedMatrices(i).Kp = K(:,2)*pScaleFactor;
+
+
+    % Display the results for this operating point
+    disp(['Operating Point ', num2str(i), ':']);
+    disp('A_ex matrix:');
+    disp(A_ex);
+    disp('B_ex matrix:');
+    disp(B_ex);
+    disp('Controller Gain K:');
+    disp(K);
+end
+
+
+%% Construct gain scheduling algorithm
+function 
 %% Next step: Construct a delta steering input to parse into the system
 
 %% See the response of the linearized system with controllers designed for that system and tune controllers
@@ -251,3 +296,36 @@ K = icare(A_ex, B_ex, Q, R);
 %% Then do fuzzy lol
 
 %% Maybe try some optimal control method?
+
+
+%% Functions
+function gainMat = gainScheduling(curretSA, ssVectorSA, ExpandedMatrices)
+%Define an algorithmic method to switch between gains, when operating
+%points change
+
+gainMat = struct('Kr', zeros([size(ExpandedMatrices(1).Kr)]), 'Ki', zeros([size(ExpandedMatrices(1).Ki)]), 'Kp', zeros([size(ExpandedMatrices(1).Kp)]));
+% Loop to calculate degreeOfMembership
+for iOP = 1:5
+    if iOP == 1
+        % Special case for the first element
+        degreeOfMembership = triangularPulse(2*ssVectorSA(1), ssVectorSA(1), ssVectorSA(2), curretSA);
+        gainMat.Kr = gainMat.Kr + degreeOfMembership.*ExpandedMatrices(iOP).Kr;
+        gainMat.Ki = gainMat.Kr + degreeOfMembership.*ExpandedMatrices(iOP).Ki;
+        gainMat.Kp = gainMat.Kr + degreeOfMembership.*ExpandedMatrices(iOP).Kp;
+    elseif iOP == 5
+        % Special case for the last element
+        degreeOfMembership = triangularPulse(2*ssVectorSA(4), ssVectorSA(5), 2*ssVectorSA(5), curretSA);
+        gainMat.Kr = gainMat.Kr + degreeOfMembership.*ExpandedMatrices(iOP).Kr;
+        gainMat.Ki = gainMat.Kr + degreeOfMembership.*ExpandedMatrices(iOP).Ki;
+        gainMat.Kp = gainMat.Kr + degreeOfMembership.*ExpandedMatrices(iOP).Kp;
+    else
+        % General case for elements 2 to 4
+        degreeOfMembership = triangularPulse(ssVectorSA(iOP-1), ssVectorSA(iOP), ssVectorSA(iOP+1), curretSA);
+        gainMat.Kr = gainMat.Kr + degreeOfMembership.*ExpandedMatrices(iOP).Kr;
+        gainMat.Ki = gainMat.Kr + degreeOfMembership.*ExpandedMatrices(iOP).Ki;
+        gainMat.Kp = gainMat.Kr + degreeOfMembership.*ExpandedMatrices(iOP).Kp;
+    end
+end
+
+
+end

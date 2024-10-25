@@ -86,6 +86,7 @@ h = histogram2(steeringAngleRad, V, [30 30],'FaceColor','flat');
 % their symmetrics.
 
 % Define the data for each operating point
+% Operating points were chosen from the previous histogram
 % First operating point
 vSS1 = (6.66 + 7.4) / 2;
 bSS1 = 0;
@@ -170,13 +171,6 @@ for i = 1:5
     E(4) = Fx_fr == Fx_rr;
 
     solution = solve(E, [Fx_fl Fx_fr Fx_rl Fx_rr], 'ReturnConditions', true);
-    % Solve the equations
-    % if delta ~=0
-    %     solution = solve(E, [Fx_fl Fx_fr Fx_rl Fx_rr], 'ReturnConditions', true);
-    % else
-    %     solution = solve(E, [Fx_fl Fx_fr], 'ReturnConditions', true);
-    % end
-    % Store the solution for this operating point
     if delta~=0
         solutions{i}.Fx_fl =double(solution.Fx_fl);
         solutions{i}.Fx_fr =double(solution.Fx_fr);
@@ -247,7 +241,7 @@ end
 syms x1 x2 real % Assuming x1 and x2 represent the states
 
 % Initialize a variable to store expanded matrices for each operating point
-ExpandedMatrices = struct('A_ex', {}, 'B_ex', {}, 'K', {});
+ExpandedMatrices = struct('A_ex', {}, 'B_ex', {}, 'Kr', {}, 'Ki', {}, 'Kp', {});
 
 % Loop through each operating point to compute expanded matrices and controller gain
 for i = 1:5
@@ -263,16 +257,20 @@ for i = 1:5
     B_ex = [B; [0 0 0 0]];
 
     % Define the weights for the cost function
-    Q = diag([1/(deg2rad(30))^2 1 100]); % Adjust weights as necessary
+    Q = diag([1/(deg2rad(30))^2 1 5]); % Adjust weights as necessary
     R = 1/2000 * eye(4); % Adjust R matrix size if needed
 
     % Calculate the controller gain using icare
-    K = icare(A_ex, B_ex, Q, R);
+    [~, K, ~] = icare(A_ex, B_ex, Q, R);
 
+    pScaleFactor = 0.2;
     % Store the expanded matrices and controller gain in the structure
     ExpandedMatrices(i).A_ex = A_ex;
     ExpandedMatrices(i).B_ex = B_ex;
-    ExpandedMatrices(i).K = K;
+    ExpandedMatrices(i).Kr = [K(:,1) K(:,2)*(1-pScaleFactor)];
+    ExpandedMatrices(i).Ki = -K(:,3);
+    ExpandedMatrices(i).Kp = K(:,2)*pScaleFactor;
+
 
     % Display the results for this operating point
     disp(['Operating Point ', num2str(i), ':']);
@@ -283,7 +281,10 @@ for i = 1:5
     disp('Controller Gain K:');
     disp(K);
 end
-%% Construct gain scheduling algorithm
+
+
+%% Construct gain scheduling algorith 
+gainStruct = gainScheduling(delta, [OperatingPointsTable.deltaSS(:)], ExpandedMatrices);
 
 %% Next step: Construct a delta steering input to parse into the system
 
@@ -296,3 +297,7 @@ end
 %% Then do fuzzy lol
 
 %% Maybe try some optimal control method?
+
+
+%% Functions
+
