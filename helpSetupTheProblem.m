@@ -177,6 +177,7 @@ for i = 1:5
         solutions{i}.Fx_rl =double(solution.Fx_rl);
         solutions{i}.Fx_rr =double(solution.Fx_rr);
     else 
+        % Maybe solve for actual resistance on the straight.
         solutions{i}.Fx_fl = 100;
         solutions{i}.Fx_fr = 100;
         solutions{i}.Fx_rl = 100;
@@ -282,15 +283,11 @@ for i = 1:5
     disp(K);
 end
 
-
+addpath(genpath('.\'))
 %% Construct gain scheduling algorith 
 gainStruct = gainScheduling(delta, [OperatingPointsTable.deltaSS(:)], ExpandedMatrices);
 
 %% Next step: Construct a delta steering input to parse into the system
-
-%% See the response of the linearized system with controllers designed for that system and tune controllers
-% Define velocity and probably calculate ay and ax (from yaw rate and v) to calculate loads on
-% wheels. 
 
 %% Use controller on non linear model (i will perhaps have to make a linear model) 
 
@@ -298,6 +295,4 @@ gainStruct = gainScheduling(delta, [OperatingPointsTable.deltaSS(:)], ExpandedMa
 
 %% Maybe try some optimal control method?
 
-
-%% Functions
 
