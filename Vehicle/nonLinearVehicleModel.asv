@@ -6,12 +6,6 @@ persistent integral_yaw_error accel b_dot
 if isempty(integral_yaw_error)
     integral_yaw_error = 0;
 end
-if isempty(accel)
-    accel = 0;
-end
-if isempty(b_dot)
-    b_dot = 0;
-end
 
 g = 9.81; % Gravitational acceleration
 
@@ -19,10 +13,10 @@ g = 9.81; % Gravitational acceleration
 psi_dot  = Y(1);  % Yaw rate
 v        = Y(2);  % Longitudinal velocity
 b        = Y(3);  % Side-slip angle
-omega_FL = Y(4);  % Wheel angular velocity (front left)
-omega_FR = Y(5);  % Wheel angular velocity (front right)
-omega_RL = Y(6);  % Wheel angular velocity (rear left)
-omega_RR = Y(7);  % Wheel angular velocity (rear right)
+omega_FL = Y(6);  % Wheel angular velocity (front left)
+omega_FR = Y(7);  % Wheel angular velocity (front right)
+omega_RL = Y(8);  % Wheel angular velocity (rear left)
+omega_RR = Y(9);  % Wheel angular velocity (rear right)
 
 % Kinematic calculations
 vx = v * cos(b);
@@ -83,12 +77,19 @@ v_dot = 1 / vehicle.m * ((Fx_fl + Fx_fr) * cos(delta - b) - (Fy_fl + Fy_fr) * si
 beta_dot = (1 / (vehicle.m * v)) * ((Fx_fl + Fx_fr) * sin(delta - b) - (Fy_fl + Fy_fr) * cos(delta - b) + ...
                                 (Fx_rl + Fx_rr) * sin(b) + (Fy_rl + Fy_rr) * cos(b) + ...
                                 1/2 * 1.224 * vehicle.cd * v^2 * sin(b)) - psi_dot;
-b_dot = beta_dot;
-accel = v_dot;
+
 % ψ_ddot (yaw acceleration)
 psi_ddot = (1 / vehicle.Jz) * (lf * ((Fx_fl + Fx_fr) * sin(delta) + (Fy_fl + Fy_fr) * cos(delta)) - ...
                                lr * (Fy_rl + Fy_rr) + bf / 2 * (-Fx_fl + Fx_fr) * cos(delta) - ...
                                (-Fy_fl + Fy_fr) * sin(delta) + br / 2 * (Fx_rr - Fx_rl));
+
+% Update these states directly (not integrated)
+acceleration = v_dot;  % Update the current acceleration value
+lateral_slip_rate = beta_dot;  % Update the current lateral slip rate
+
+% Ensure Y(4) and Y(5) contain these current values but aren't integrated
+Y(4) = acceleration;
+Y(5) = lateral_slip_rate;
 
 % Calculate motor torque and wheel accelerations
 psi_dot_desired = v * delta / (lf + lr);
@@ -112,6 +113,8 @@ omega_RR_dot = (Tmotor(4) - Fx_rr * vehicle.R) / vehicle.Jw;
 x_dot = [psi_ddot;   % Change in yaw rate
          v_dot;      % Change in velocity
          beta_dot;   % Change in slip angle
+         0;          % Keep acceleration Y(4) updated, not integrated
+         0;          % Keep beta_dot Y(5) updated, not integrated
          omega_FL_dot;
          omega_FR_dot;
          omega_RL_dot;

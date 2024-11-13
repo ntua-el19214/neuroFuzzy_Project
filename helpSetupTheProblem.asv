@@ -283,9 +283,9 @@ for i = 1:5
     disp('Controller Gain K:');
     disp(K);
 end
-steerAngleVector = [deltaSS1 deltaSS2 deltaSS3 deltaSS4 deltaSS5];
-save("ExpandedMatrices.mat",'ExpandedMatrices')
-save("ssSteerAVector.mat", 'steerAngleVector')
+
+save("ExpandedMatrices.mat", ExpandedMatrices)
+save("ssSteerAVector.mat', [deltaSS1 deltaSS2 deltaSS3 deltaSS4 deltaSS5])
 %% Construct gain scheduling algorith 
 % This was a test for the algorithm
 gainStruct = gainScheduling(delta, [OperatingPointsTable.deltaSS(:)], ExpandedMatrices);
