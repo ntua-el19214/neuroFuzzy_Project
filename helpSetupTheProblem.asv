@@ -179,10 +179,10 @@ for i = 1:5
         solutions{i}.Fx_rr =double(solution.Fx_rr);
     else 
         % Maybe solve for actual resistance on the straight.
-        solutions{i}.Fx_fl = 100;
-        solutions{i}.Fx_fr = 100;
-        solutions{i}.Fx_rl = 100;
-        solutions{i}.Fx_rr = 100;
+        solutions{i}.Fx_fl = 30.6;
+        solutions{i}.Fx_fr = 30.6;
+        solutions{i}.Fx_rl = 30.6;
+        solutions{i}.Fx_rr = 30.6;
     end
 
     % Evaluate and display the solution
@@ -196,7 +196,7 @@ disp(OperatingPointsTable);
 
 
 %% Set up matrices
-for i = 1:5
+for i =3:3
     % Extract operating point values
     v = OperatingPointsTable.vSS(i);
     delta = OperatingPointsTable.deltaSS(i);
@@ -246,7 +246,7 @@ syms x1 x2 real % Assuming x1 and x2 represent the states
 ExpandedMatrices = struct('A_ex', {}, 'B_ex', {}, 'Kr', {}, 'Ki', {}, 'Kp', {});
 
 % Loop through each operating point to compute expanded matrices and controller gain
-for i = 1:5
+for i = 3:3
     % Retrieve the matrices from the previously calculated results
     A = Matrices(i).A;
     B = Matrices(i).B;
@@ -283,9 +283,9 @@ for i = 1:5
     disp('Controller Gain K:');
     disp(K);
 end
-
-save("ExpandedMatrices.mat", ExpandedMatrices)
-save("ssSteerAVector.mat', [deltaSS1 deltaSS2 deltaSS3 deltaSS4 deltaSS5])
+steerAngleVector = [deltaSS1 deltaSS2 deltaSS3 deltaSS4 deltaSS5];
+save("ExpandedMatrices.mat",'ExpandedMatrices')
+save("ssSteerAVector.mat", 'steerAngleVector')
 %% Construct gain scheduling algorith 
 % This was a test for the algorithm
 gainStruct = gainScheduling(delta, [OperatingPointsTable.deltaSS(:)], ExpandedMatrices);
