@@ -3,6 +3,8 @@ clc;
 clear nonLinearVehicleModel
 clear outputFunction
 
+
+addpath(genpath('./'))
 close all
 
 % Define vehicle parameters (example values)
@@ -34,19 +36,19 @@ fxSS = [30.6;       % Steady state fx FL
 
 % Define initial state vector Y0 = [psi_dot, v, beta, accel, beta_dot, omega_FL, omega_FR, omega_RL, omega_RR]
 Y0 = [0;               % Initial yaw rate (psi_dot)
-      10;              % Initial speed (vx, m/s)
-      0;              % Initial speed (vy, m/s)
+      0.01;               % Initial speed (vx, m/s)
+      0;               % Initial speed (vy, m/s)
       0;               % Initial beta_dot
-      10/vehicle.R;    % Initial wheel speed FL (omega_FL)
-      10/vehicle.R;    % Initial wheel speed FR (omega_FR)
-      10/vehicle.R;    % Initial wheel speed RL (omega_RL)
-      10/vehicle.R;    % Initial wheel speed RR (omega_RR)
+      0.01/vehicle.R;    % Initial wheel speed FL (omega_FL)
+      0.01/vehicle.R;    % Initial wheel speed FR (omega_FR)
+      0.01/vehicle.R;    % Initial wheel speed RL (omega_RL)
+      0.01/vehicle.R;    % Initial wheel speed RR (omega_RR)
       0];              % Initial integral error
 
 % Simulation time
 tspan = [0 10];   % Time interval (seconds)
 % Set ODE options with OutputFcn
-options = odeset('RelTol', 1e-5, 'AbsTol', 1e-7, ...
+options = odeset('RelTol', 1e-4, 'AbsTol', 1e-7, ...
                  'OutputFcn', @(t, Y, flag) outputFunction(t, Y, flag, vehicle, delta, steerAngleVector, fxSS, ExpandedMatrices));
 
 % Run the ODE solver with options
@@ -84,3 +86,15 @@ for i = 1:4
     xlabel('Time (s)');
     ylabel('Motor Speed (rad/s)');
 end
+
+figure;
+plot(time_values, ax_values);
+title('Acceleration x Over Time');
+xlabel('Time (s)');
+ylabel('Acceleration (m/s^2)');
+
+figure;
+plot(time_values, ay_values);
+title('Acceleration y Over Time');
+xlabel('Time (s)');
+ylabel('Acceleration (m/s^2)');
