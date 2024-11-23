@@ -1,14 +1,14 @@
-function [x_dot TmotorOut yaw_error_Out, ax_out, ay_out]= nonLinearVehicleModel(t, Y, vehicle, delta, ssVectorSA, fxSS ,ExpandedMatrices)
+function [x_dot]= nonLinearVehicleModel(t, Y, ax, ay, vehicle, delta, ssVectorSA, fxSS ,ExpandedMatrices)
 % NONLINEARVEHICLEMODEL describes the non-linear equations that dictate vehicle dynamics
 
 % Initialize integral term for yaw control
-persistent ax ay
-if isempty(ax)
-    ax = 0;
-end
-if isempty(ay)
-    ay = 0;
-end
+% persistent ax ay
+% if isempty(ax)
+%     ax = 0;
+% end
+% if isempty(ay)
+%     ay = 0;
+% end
 
 g = 9.81; % Gravitational acceleration
 
@@ -22,6 +22,8 @@ omega_FR = Y(6);  % Wheel angular velocity (front right)
 omega_RL = Y(7);  % Wheel angular velocity (rear left)
 omega_RR = Y(8);  % Wheel angular velocity (rear right)
 i_error  = Y(9);  % integral error
+
+
 
 % Vehicle geometry and load distribution
 lf = vehicle.wb * (1 - vehicle.wd);
@@ -67,6 +69,20 @@ Fy_fr = F_lateral(slipAngle_FR, slip_FR, Fz_fr, deg2rad(0));
 Fy_rl = F_lateral(slipAngle_RL, slip_RL, Fz_rl, deg2rad(0));
 Fy_rr = F_lateral(slipAngle_RR, slip_RR, Fz_rr, deg2rad(0));
 
+% Tmotor = 100/vehicle.GR*vehicle.R*ones(4,1);
+
+
+% Fx_fl= Tmotor(1)*vehicle.GR/vehicle.R;
+% Fx_fr= Tmotor(2)*vehicle.GR/vehicle.R;
+% Fx_rl= Tmotor(3)*vehicle.GR/vehicle.R;
+% Fx_rr= Tmotor(4)*vehicle.GR/vehicle.R;
+% 
+% Fy_fl = 0.6*Fz_fl* sin(slipAngle_FR);
+% Fy_fr = 0.6*Fz_fr* sin(slipAngle_FL);
+% Fy_rl = 0.6*Fz_rl* sin(slipAngle_RL);
+% Fy_rr = 0.6*Fz_rr* sin(slipAngle_RR);
+
+
 % Update the acceleration and beta_dot in the state
 vx_dot = 1 / vehicle.m * ((Fx_fl + Fx_fr)*cos(delta) + Fx_rl + Fx_rr...
                            -(Fy_fl + Fy_fr)*sin(delta)  ...
@@ -79,9 +95,6 @@ vy_dot = 1 / vehicle.m * ((Fx_fl + Fx_fr)*sin(delta) ...
 beta_dot = 1 / (vehicle.m * sqrt(vx^2 + vy^2)) * ((Fx_fl + Fx_fr) * sin(delta - b) + (Fy_fl + Fy_fr) * cos(delta - b) - ...
                                 (Fx_rl + Fx_rr) * sin(b) + (Fy_rl + Fy_rr) * cos(b) + ...
                                 1/2 * 1.224 * vehicle.cd * vx^2 * sin(b)) - psi_dot;
-
-ax = vx_dot;
-ay = vy_dot;
 % ψ_ddot (yaw acceleration)
 psi_ddot = (1 / vehicle.Jz) * (lf * ((Fx_fl + Fx_fr) * sin(delta) + (Fy_fl + Fy_fr) * cos(delta)) - ...
                                lr * (Fy_rl + Fy_rr) + bf / 2 * (-Fx_fl + Fx_fr) * cos(delta) - ...
@@ -110,10 +123,6 @@ omega_FR_dot = (Tmotor(2)*vehicle.GR - Fx_fr * vehicle.R - 0.03*Fz_fr) / vehicle
 omega_RL_dot = (Tmotor(3)*vehicle.GR - Fx_rl * vehicle.R - 0.03*Fz_rl) / vehicle.Jw;
 omega_RR_dot = (Tmotor(4)*vehicle.GR - Fx_rr * vehicle.R - 0.03*Fz_rr) / vehicle.Jw;
 
-TmotorOut = Tmotor;
-yaw_error_Out = yaw_error;
-ax_out        = ax;
-ay_out        = ay;
 
 % Return the state derivatives
 x_dot = [psi_ddot;   % Change in yaw rate

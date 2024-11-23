@@ -3,6 +3,13 @@ clc;
 clear nonLinearVehicleModel
 clear outputFunction
 
+% Define Runge-Kuta parameters
+a = 0; b = 5; % a (simulation start time), b (simulation end time) in seconds
+N = 500000;   % Number of steps (nodes)
+
+A = [0 0 0 0 0; 1/3 0 0 0 0; 1/6 1/6 0 0 0; 1/8 0 3/8 0 0; 1/2 0 -3/2 2 0];
+tau =  [0; 1/3; 1/3; 1/2; 1];
+bhta = [1/6; 0; 0; 2/3; 1/6];
 
 addpath(genpath('./'))
 close all
@@ -36,23 +43,21 @@ fxSS = [30.6;       % Steady state fx FL
 
 % Define initial state vector Y0 = [psi_dot, v, beta, accel, beta_dot, omega_FL, omega_FR, omega_RL, omega_RR]
 Y0 = [0;               % Initial yaw rate (psi_dot)
-      0.01;               % Initial speed (vx, m/s)
+      0.1;               % Initial speed (vx, m/s)
       0;               % Initial speed (vy, m/s)
       0;               % Initial beta_dot
-      0.01/vehicle.R;    % Initial wheel speed FL (omega_FL)
-      0.01/vehicle.R;    % Initial wheel speed FR (omega_FR)
-      0.01/vehicle.R;    % Initial wheel speed RL (omega_RL)
-      0.01/vehicle.R;    % Initial wheel speed RR (omega_RR)
-      0];              % Initial integral error
+      0.1/vehicle.R;    % Initial wheel speed FL (omega_FL)
+      0.1/vehicle.R;    % Initial wheel speed FR (omega_FR)
+      0.1/vehicle.R;    % Initial wheel speed RL (omega_RL)
+      0.1/vehicle.R;    % Initial wheel speed RR (omega_RR)
+      0];               % intergal error
 
 % Simulation time
 tspan = [0 10];   % Time interval (seconds)
 % Set ODE options with OutputFcn
-options = odeset('RelTol', 1e-4, 'AbsTol', 1e-7, ...
-                 'OutputFcn', @(t, Y, flag) outputFunction(t, Y, flag, vehicle, delta, steerAngleVector, fxSS, ExpandedMatrices));
-
+ode = @(t, Y, ax, ay) nonLinearVehicleModel(t, Y, ax, ay, vehicle, delta, steerAngleVector, fxSS, ExpandedMatrices);
 % Run the ODE solver with options
-[t, Y] = ode23s(@(t, Y) nonLinearVehicleModel(t, Y, vehicle, delta, steerAngleVector, fxSS, ExpandedMatrices), tspan, Y0, options);
+[t, Y, ax, ay] = RKESys(a,b,N,ode, Y0,A,bhta,tau);
 
 % Plot Results
 % The variables Tmotor_values, yaw_error_values, and time_values should now be available in the base workspace.
@@ -73,7 +78,7 @@ xlabel('Time (s)');
 ylabel('Yaw Error (rad/s)');
 
 figure;
-plot(t, Y(:,2));
+plot(t, Y(2,:));
 title('Velocity Over Time');
 xlabel('Time (s)');
 ylabel('Velocity (m/s)');
@@ -81,7 +86,7 @@ ylabel('Velocity (m/s)');
 figure
 for i = 1:4
     subplot(2, 2, i);
-    plot(t, Y(:,i+4));
+    plot(t, Y(i+4,:));
     title(['Wheel Speed ', num2str(i), ' Over Time']);
     xlabel('Time (s)');
     ylabel('Motor Speed (rad/s)');
