@@ -4,8 +4,8 @@ clear nonLinearVehicleModel
 clear outputFunction
 
 % Define Runge-Kuta parameters
-a = 0; b = 5; % a (simulation start time), b (simulation end time) in seconds
-N = 500000;   % Number of steps (nodes)
+a = 0; b = 10; % a (simulation start time), b (simulation end time) in seconds
+N = 300000;   % Number of steps (nodes)
 
 A = [0 0 0 0 0; 1/3 0 0 0 0; 1/6 1/6 0 0 0; 1/8 0 3/8 0 0; 1/2 0 -3/2 2 0];
 tau =  [0; 1/3; 1/3; 1/2; 1];
@@ -27,12 +27,12 @@ vehicle.CoGz = 0.3;          % Center of Gravity height (m)
 vehicle.Jz = 100;            % Yaw moment of inertia (kg*m^2)
 vehicle.Jw = 0.06;           % Wheel inertia (kg*m^2)
 vehicle.GR = 15;             % Vehicle gear ratio
-%vehicle.TireMaxFx = maxFxForSaFzCombination();
+% vehicle.TireMaxFx = maxFxForSaFzCombination();
 vehicle.Motors = Motors('AMK-FSAE Motors Data.xlsx');
 
 
 % Define control parameters and input variables (example values)
-delta            = 0;      % Steering angle (rad)
+delta            = 0.02;      % Steering angle (rad)
 load("ssSteerAVector.mat");           % Steady State linearization points Steering angle (example empty)
 load("ExpandedMatrices.mat");         % Matrices struct for control (example empty)
 
@@ -50,7 +50,9 @@ Y0 = [0;               % Initial yaw rate (psi_dot)
       0.1/vehicle.R;    % Initial wheel speed FR (omega_FR)
       0.1/vehicle.R;    % Initial wheel speed RL (omega_RL)
       0.1/vehicle.R;    % Initial wheel speed RR (omega_RR)
-      0];               % intergal error
+      0;                % intergal error
+      0;                % displacement x
+      0];               % displacement y
 
 % Simulation time
 tspan = [0 10];   % Time interval (seconds)
@@ -93,13 +95,25 @@ for i = 1:4
 end
 
 figure;
-plot(time_values, ax_values);
+plot(t, ax);
 title('Acceleration x Over Time');
 xlabel('Time (s)');
 ylabel('Acceleration (m/s^2)');
 
 figure;
-plot(time_values, ay_values);
+plot(t, ay);
+title('Acceleration y Over Time');
+xlabel('Time (s)');
+ylabel('Acceleration (m/s^2)');
+
+figure;
+plot(t, Y(10,:));
+title('Acceleration x Over Time');
+xlabel('Time (s)');
+ylabel('Acceleration (m/s^2)');
+
+figure;
+plot(t, Y(11,:));
 title('Acceleration y Over Time');
 xlabel('Time (s)');
 ylabel('Acceleration (m/s^2)');

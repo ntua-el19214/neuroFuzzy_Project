@@ -28,7 +28,7 @@ function [t,Y,ax, ay] = RKESys(a,b,N,F,Y0,A,bhta,tau)
         end
         Y(:,n+1) = Y(:,n) + sm2;
         %%
-        ax(n+1) = (Y(3,n+1)-Y(3,n))/h;
+        ax(n+1) = (Y(2,n+1)-Y(2,n))/h;
         ay(n+1) = (Y(3,n+1)-Y(3,n))/h;
         %%
     end
