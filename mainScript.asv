@@ -136,9 +136,9 @@ xlabel('Displacement X (m)');
 ylabel('Displacement Y (m)');
 
 figure;
-plot(t(2:end), sqrt(Y(2,2:end).^2 + Y(3,2:end).^2) .* delta / vehicle.wb);
+plot(t, sqrt(Y(2,:).^2 + Y(3,:).^2) .* delta / vehicle.wb);
 hold on;
-plot(t(2:end),Y(1,2:end))
+plot(t, sqrt(Y(2,:).^2 + Y(3,:).^2) .* delta / vehicle.wb)
 title('Vehicle Trajectory');
 xlabel('Displacement X (m)');
 ylabel('Displacement Y (m)');

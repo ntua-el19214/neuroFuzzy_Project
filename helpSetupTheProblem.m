@@ -260,13 +260,13 @@ for i = 3:3
     B_ex = [B; [0 0 0 0]];
 
     % Define the weights for the cost function
-    Q = diag([1/(deg2rad(30))^2 1 5]); % Adjust weights as necessary
-    R = 1/2000 * eye(4); % Adjust R matrix size if needed
+    Q = diag([1 1 1]); % Adjust weights as necessary
+    R = 1 * eye(4); % Adjust R matrix size if needed
 
     % Calculate the controller gain using icare
     [~, K, ~] = icare(A_ex, B_ex, Q, R);
 
-    pScaleFactor = 0.2;
+    pScaleFactor = 0.4;
     % Store the expanded matrices and controller gain in the structure
     ExpandedMatrices(i).A_ex = A_ex;
     ExpandedMatrices(i).B_ex = B_ex;

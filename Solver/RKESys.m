@@ -1,4 +1,4 @@
-function [t,Y,ax, ay] = RKESys(a,b,N,F,Y0,A,bhta,tau)
+function [t,Y,ax, ay] = RKESys(a,b,N,F, delta, Y0,A,bhta,tau)
     rng('default');
     rng(2024);
 
@@ -20,7 +20,7 @@ function [t,Y,ax, ay] = RKESys(a,b,N,F,Y0,A,bhta,tau)
             for j = 1:q
                 sm1 = sm1 + h * A(i,j)*Kn(:,j);
             end
-            Kn(:,i) = F(tn(i),Y(:,n)+sm1,ax(n), ay(n));
+            Kn(:,i) = F(tn(i),Y(:,n)+sm1, delta(n),ax(n), ay(n));
         end
         sm2 = zeros(M,1);
         for i = 1:q

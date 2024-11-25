@@ -1,4 +1,4 @@
-function [x_dot]= nonLinearVehicleModel(t, Y, ax, ay, vehicle, delta, ssVectorSA, fxSS ,ExpandedMatrices)
+function [x_dot]= nonLinearVehicleModel(t, Y, delta, ax, ay, vehicle, ssVectorSA, fxSS ,ExpandedMatrices)
 % NONLINEARVEHICLEMODEL describes the non-linear equations that dictate vehicle dynamics
 
 % Initialize integral term for yaw control
