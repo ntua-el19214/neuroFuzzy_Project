@@ -54,10 +54,10 @@ slip_FR = calculateSlipRatio(omega_FR, speedFR, vehicle.R);
 slip_RL = calculateSlipRatio(omega_RL, speedRL, vehicle.R);
 slip_RR = calculateSlipRatio(omega_RR, speedRR, vehicle.R);
 
-slipAngle_FR = atan((vy + psi_dot*lf)/(vx + 0.5*psi_dot*bf)) - delta;
-slipAngle_FL = atan((vy + psi_dot*lf)/(vx - 0.5*psi_dot*bf)) - delta;
-slipAngle_RR = atan((vy - psi_dot*lr)/(vx + 0.5*psi_dot*br));
-slipAngle_RL = atan((vy - psi_dot*lr)/(vx - 0.5*psi_dot*br));
+slipAngle_FR = atan((vy + psi_dot*lf)/(vx + 0.5*psi_dot*tf)) - delta;
+slipAngle_FL = atan((vy + psi_dot*lf)/(vx - 0.5*psi_dot*tf)) - delta;
+slipAngle_RR = atan((vy - psi_dot*lr)/(vx + 0.5*psi_dot*tr));
+slipAngle_RL = atan((vy - psi_dot*lr)/(vx - 0.5*psi_dot*tr));
 
 % Calculate tire forces
 Fx_fl = F_longit(slipAngle_FL, slip_FL, Fz_fl, deg2rad(0));
@@ -94,9 +94,11 @@ slipAngleMatrix = [slipAngle_FL, slipAngle_FR, slipAngle_RL, slipAngle_RR];
 fzMatrix = [Fz_fl, Fz_fr, Fz_rl, Fz_rr];
 omegaMatrix = [omega_FL, omega_FR, omega_RL, omega_RR];
 
-Tmotor = motorTorque(vehicle, input, slipAngleMatrix, fzMatrix, omegaMatrix);
-
-% Tmotor = 120/vehicle.GR*vehicle.R*ones(4,1);
+% Tmotor = motorTorque(vehicle, input, slipAngleMatrix, fzMatrix, omegaMatrix);
+if psi_ddot <0 
+    peos = 1;
+end
+Tmotor = 120/vehicle.GR*vehicle.R*ones(4,1);
 
 omega_FL_dot = (Tmotor(1)*vehicle.GR - Fx_fl * vehicle.R - 0.03*Fz_fl) / vehicle.Jw;
 omega_FR_dot = (Tmotor(2)*vehicle.GR - Fx_fr * vehicle.R - 0.03*Fz_fr) / vehicle.Jw;

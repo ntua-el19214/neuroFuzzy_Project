@@ -260,7 +260,7 @@ for i = 3:3
     B_ex = [B; [0 0 0 0]];
 
     % Define the weights for the cost function
-    Q = diag([1 1 1]); % Adjust weights as necessary
+    Q = diag([100 100 50]); % Adjust weights as necessary
     R = 1 * eye(4); % Adjust R matrix size if needed
 
     % Calculate the controller gain using icare

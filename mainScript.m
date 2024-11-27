@@ -6,7 +6,7 @@ clear
 
 % Define Runge-Kuta parameters
 a = 0; b = 5; % a (simulation start time), b (simulation end time) in seconds
-N = 300000;   % Number of steps (nodes)
+N = 700000;   % Number of steps (nodes)
 
 A = [0 0 0 0 0; 1/3 0 0 0 0; 1/6 1/6 0 0 0; 1/8 0 3/8 0 0; 1/2 0 -3/2 2 0];
 tau =  [0; 1/3; 1/3; 1/2; 1];
@@ -26,7 +26,7 @@ vehicle.tr = 1.22;           % Track width rear (m)
 vehicle.R = 0.21;            % Wheel radius (m)
 vehicle.CoGz = 0.3;          % Center of Gravity height (m)
 vehicle.Jz = 100;            % Yaw moment of inertia (kg*m^2)
-vehicle.Jw = 0.06;           % Wheel inertia (kg*m^2)
+vehicle.Jw = 0.2;           % Wheel inertia (kg*m^2)
 vehicle.GR = 15;             % Vehicle gear ratio
 % vehicle.TireMaxFx = maxFxForSaFzCombination();
 vehicle.Motors = Motors('AMK-FSAE Motors Data.xlsx');
@@ -35,11 +35,10 @@ v0 = 10;
 % Define control parameters and input variables (example values)
 delta = steeringInput(a,b,N,v0,vehicle);    % Steering angle (rad)
 delta = [zeros(1,10000) ,delta , zeros(1,(N - length(delta)-10000))];
-delta_smooth = smoothdata(delta, 'gaussian', 5000);
+delta_smooth = smoothdata(delta, 'gaussian', 30000);
 
-% plot delta
 figure 
-plot(delta_smooth*57.2957795, 'LineWidth',1.5)
+plot(delta*57.2957795, 'LineWidth',1.5)
 grid on
 xlabel("Time Steps")
 ylabel("Steering Input [deg]")
@@ -56,13 +55,13 @@ fxSS = [30.6;       % Steady state fx FL
 Y0 = [0;               % Initial yaw rate (psi_dot)
       v0;              % Initial speed (vx, m/s)
       0;               % Initial speed (vy, m/s)
-      0;               % Initial beta_dot
       v0/vehicle.R;    % Initial wheel speed FL (omega_FL)
       v0/vehicle.R;    % Initial wheel speed FR (omega_FR)
       v0/vehicle.R;    % Initial wheel speed RL (omega_RL)
       v0/vehicle.R;    % Initial wheel speed RR (omega_RR)
       0;               % intergal error
       0;               % displacement x
+      0;
       0];              % displacement y
 
 % Simulation time
@@ -118,20 +117,20 @@ xlabel('Time (s)');
 ylabel('Acceleration (m/s^2)');
 
 figure;
-plot(t, Y(10,:));
+plot(t, Y(9,:));
 title('Displacement X');
 xlabel('Time (s)');
 ylabel('X (m)');
 
 figure;
-plot(t, Y(11,:));
+plot(t, Y(10,:));
 title('Displacement Y');
 xlabel('Time (s)');
 ylabel('Y (m)');
 
 figure;
-plot(Y(10,:), Y(11,:));
-title('Vehicle Trajectory');
+plot(Y(9,:), Y(10,:));
+title('Vehicle Trajectory (on vehicle frame)');
 xlabel('Displacement X (m)');
 ylabel('Displacement Y (m)');
 
@@ -139,6 +138,6 @@ figure;
 plot(t(2:end), sqrt(Y(2,2:end).^2 + Y(3,2:end).^2) .* delta / vehicle.wb);
 hold on;
 plot(t(2:end),Y(1,2:end))
-title('Vehicle Trajectory');
-xlabel('Displacement X (m)');
-ylabel('Displacement Y (m)');
+title('Target Yaw Rate vs Actual Yaw Rate');
+xlabel('Time (s)');
+ylabel('Yaw Rate (rad/s)');
