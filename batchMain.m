@@ -1,0 +1,95 @@
+% Main Script to Run nonLinearVehicleModel (Multiple Simulations)
+clc;
+clear nonLinearVehicleModel
+clear outputFunction
+clear
+
+% Define Runge-Kutta parameters
+a = 0; b = 3; % a (simulation start time), b (simulation end time) in seconds
+N = 500000;   % Number of steps (nodes)
+
+A = [0 0 0 0 0; 1/3 0 0 0 0; 1/6 1/6 0 0 0; 1/8 0 3/8 0 0; 1/2 0 -3/2 2 0];
+tau =  [0; 1/3; 1/3; 1/2; 1];
+bhta = [1/6; 0; 0; 2/3; 1/6];
+
+addpath(genpath('./'))
+close all
+
+% Define vehicle parameters (example values)
+vehicle.m  = 270;            % Mass of the vehicle (kg)
+vehicle.cd = 2;              % Coefficient of drag
+vehicle.cl = 7;              % Coefficient of lift
+vehicle.wb = 1.57;           % Wheelbase (m)
+vehicle.wd = 0.5;            % Weight distribution (% front)
+vehicle.tf = 1.22;           % Track width front (m)
+vehicle.tr = 1.22;           % Track width rear (m)
+vehicle.R = 0.21;            % Wheel radius (m)
+vehicle.CoGz = 0.3;          % Center of Gravity height (m)
+vehicle.Jz = 100;            % Yaw moment of inertia (kg*m^2)
+vehicle.Jw = 0.2;            % Wheel inertia (kg*m^2)
+vehicle.GR = 15;             % Vehicle gear ratio
+% vehicle.TireMaxFx = maxFxForSaFzCombination();
+vehicle.Motors = Motors('AMK-FSAE Motors Data.xlsx');
+
+v0 = 8;
+
+% Define control parameters and input variables (example values)
+delta = steeringInput(a, b, N, v0, vehicle);    % Steering angle (rad)
+delta = [zeros(1, 100000), delta, zeros(1, (N - length(delta) - 100000))];
+
+% Define multiple simulation variations 
+Q = [1 100 50;...
+    1 100 200;...
+    1 100 400;];
+yaw_rate_results = zeros(length(Q(:,1)), N+1); % To store yaw rate results
+
+fxSS = [80;       % Steady state fx FL
+        80;       % Steady state fx FR
+        80;       % Steady state fx RL
+        80;];     % Steady state fx FR
+
+for i = 1:length(Q(:,1))
+    [ExpandedMatrices, steerAngleVector] = helpSetupTheProblem(Q(i, :));
+
+    % Define initial state vector Y0 = [psi_dot, v, beta, accel, beta_dot, omega_FL, omega_FR, omega_RL, omega_RR]
+    Y0 = [0;               % Initial yaw rate (psi_dot)
+          v0;              % Initial speed (vx, m/s)
+          0;               % Initial speed (vy, m/s)
+          v0 / vehicle.R;  % Initial wheel speed FL (omega_FL)
+          v0 / vehicle.R;  % Initial wheel speed FR (omega_FR)
+          v0 / vehicle.R;  % Initial wheel speed RL (omega_RL)
+          v0 / vehicle.R;  % Initial wheel speed RR (omega_RR)
+          0;               % Integral error
+          0;               % Displacement x
+          0;
+          0];              % Displacement y
+
+    % Simulation time
+    tspan = [0 10];   % Time interval (seconds)
+    
+    % Set ODE options with OutputFcn
+    ode = @(t, Y, delta, ax, ay) nonLinearVehicleModel(t, Y, delta, ax, ay, vehicle, steerAngleVector, fxSS, ExpandedMatrices);
+    
+    % Run the ODE solver with options
+    [t, Y, ax, ay] = RKESys(a, b, N, ode, delta, Y0, A, bhta, tau);
+    
+    % Store the yaw rate (Y(1)) at the end of the simulation for this variation
+    yaw_rate_results(i,:) = Y(1, :);
+end
+%%
+% Display results 
+legendObject = [];
+% Optional: Plot yaw rate results for each mass
+figure;
+plot(t(2:end), sqrt(Y(2,2:end).^2 + Y(3,2:end).^2) .* delta / vehicle.wb)
+hold on
+for iPlot = 1:length(Q(:,1))
+    plot(t, yaw_rate_results(iPlot,:), 'LineWidth', 1.5);
+    legendObject = [legendObject, "Yaw Rate " + mat2str(Q(iPlot,:))];
+end
+legendObject = ["Desired Yaw Rate", legendObject];
+legend(legendObject)
+title('Yaw Rate vs Time');
+xlabel('Time (s)');
+ylabel('Yaw Rate (rad/s)');
+grid on;

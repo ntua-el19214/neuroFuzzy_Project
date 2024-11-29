@@ -37,6 +37,6 @@ function Tmotor = motorTorque(vehicle, input, slipAngleMatrix, wheel_fz_array, w
 % end
 Tmotor= zeros(4,1);
 for iMotor=1:length(wheel_omega_array)
-    Tmotor(iMotor) = min(max(vehicle.Motors(wheel_omega_array(iMotor)*vehicle.GR)), (input(iMotor)+100)/vehicle.GR*vehicle.R);
+    Tmotor(iMotor) = min(max(vehicle.Motors(wheel_omega_array(iMotor)*vehicle.GR)), (input(iMotor))/vehicle.GR*vehicle.R);
 end
 

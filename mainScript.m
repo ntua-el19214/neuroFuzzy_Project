@@ -5,8 +5,8 @@ clear outputFunction
 clear
 
 % Define Runge-Kuta parameters
-a = 0; b = 5; % a (simulation start time), b (simulation end time) in seconds
-N = 700000;   % Number of steps (nodes)
+a = 0; b = 3; % a (simulation start time), b (simulation end time) in seconds
+N = 500000;   % Number of steps (nodes)
 
 A = [0 0 0 0 0; 1/3 0 0 0 0; 1/6 1/6 0 0 0; 1/8 0 3/8 0 0; 1/2 0 -3/2 2 0];
 tau =  [0; 1/3; 1/3; 1/2; 1];
@@ -34,8 +34,7 @@ vehicle.Motors = Motors('AMK-FSAE Motors Data.xlsx');
 v0 = 10;
 % Define control parameters and input variables (example values)
 delta = steeringInput(a,b,N,v0,vehicle);    % Steering angle (rad)
-delta = [zeros(1,10000) ,delta , zeros(1,(N - length(delta)-10000))];
-delta_smooth = smoothdata(delta, 'gaussian', 30000);
+delta = [zeros(1,100000) ,delta , zeros(1,(N - length(delta)-100000))];
 
 figure 
 plot(delta*57.2957795, 'LineWidth',1.5)
@@ -98,7 +97,7 @@ ylabel('Velocity (m/s)');
 figure
 for i = 1:4
     subplot(2, 2, i);
-    plot(t, Y(i+4,:));
+    plot(t, Y(i+3,:));
     title(['Wheel Speed ', num2str(i), ' Over Time']);
     xlabel('Time (s)');
     ylabel('Motor Speed (rad/s)');

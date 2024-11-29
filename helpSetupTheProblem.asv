@@ -1,3 +1,4 @@
+function [ExpandedMatrices, steerAngleVector] = helpSetupTheProblem()
 % Define symbolic variables
 syms Fx_fl Fx_fr Fx_rl Fx_rr Fy_fl Fy_fr Fy_rl Fy_rr F_Drag delta b v psi_dot
 syms m Jz lf lr bf br
@@ -8,8 +9,8 @@ syms m Jz lf lr bf br
 
 % Substitute the approximations in the original equations
 b_dot = (1/m/v) * ((Fx_fl + Fx_fr) * sin(delta - b) ...
-                 - (Fy_fl + Fy_fr) * cos(delta - b) ...
-                 + (Fx_rl + Fx_rr) * sin(b) ...
+                 + (Fy_fl + Fy_fr) * cos(delta - b) ...
+                 - (Fx_rl + Fx_rr) * sin(b) ...
                  + (Fy_rl + Fy_rr) * cos(b) ...
                  + F_Drag * sin(b) ) - psi_dot;
 
@@ -67,18 +68,18 @@ Jz = 75;
 F_Drag = 0.5*1.224*1.7*v^2;
 
 %% Choose Linearization Points
-P20_data = importfile('Post_Season_Testing_P20_Marathonas.csv');
-
-AccelY    = smoothdata(P20_data.ACCEL_Y./9.81, 'gaussian', 5);
-V         = smoothdata(P20_data.GPSSpeedkph/3.6, 'gaussian', 5);
-steering  = smoothdata(P20_data.Steering/3.74, 'gaussian', 5);
-steerSign = smoothdata(P20_data.SteerSign);
-
-steeringAngleRad = deg2rad(steering.*steerSign);
-
-vehicleYawRate = V.*steeringAngleRad/(lr + lf);
-
-h = histogram2(steeringAngleRad, V, [30 30],'FaceColor','flat');
+% P20_data = importfile('Post_Season_Testing_P20_Marathonas.csv');
+% 
+% AccelY    = smoothdata(P20_data.ACCEL_Y./9.81, 'gaussian', 5);
+% V         = smoothdata(P20_data.GPSSpeedkph/3.6, 'gaussian', 5);
+% steering  = smoothdata(P20_data.Steering/3.74, 'gaussian', 5);
+% steerSign = smoothdata(P20_data.SteerSign);
+% 
+% steeringAngleRad = deg2rad(steering.*steerSign);
+% 
+% vehicleYawRate = V.*steeringAngleRad/(lr + lf);
+% 
+% h = histogram2(steeringAngleRad, V, [30 30],'FaceColor','flat');
 
 % From the V - Steering histogram we obtain 3 main operating points arround
 % which we linearize. Since one is near SA = 0deg, we will linearize around
@@ -259,18 +260,18 @@ for i = 3:3
     B_ex = [B; [0 0 0 0]];
 
     % Define the weights for the cost function
-    Q = diag([1/(deg2rad(30))^2 1 5]); % Adjust weights as necessary
-    R = 1/2000 * eye(4); % Adjust R matrix size if needed
+    Q = diag([1000 100 50]); % Adjust weights as necessary
+    R = 1 * eye(4); % Adjust R matrix size if needed
 
     % Calculate the controller gain using icare
     [~, K, ~] = icare(A_ex, B_ex, Q, R);
 
-    pScaleFactor = 0.2;
+    pScaleFactor = 0.4;
     % Store the expanded matrices and controller gain in the structure
     ExpandedMatrices(i).A_ex = A_ex;
     ExpandedMatrices(i).B_ex = B_ex;
     ExpandedMatrices(i).Kr = [K(:,1) K(:,2)*(1-pScaleFactor)];
-    ExpandedMatrices(i).Ki = -K(:,3);
+    ExpandedMatrices(i).Ki = K(:,3);
     ExpandedMatrices(i).Kp = K(:,2)*pScaleFactor;
 
 
@@ -283,12 +284,15 @@ for i = 3:3
     disp('Controller Gain K:');
     disp(K);
 end
-steerAngleVector = [deltaSS1 deltaSS2 deltaSS3 deltaSS4 deltaSS5];
+
+ExpandedMatrices = ExpandedMatrices(3);
+% steerAngleVector = [deltaSS1 deltaSS2 deltaSS3 deltaSS4 deltaSS5];
+steerAngleVector = deltaSS3;
 save("ExpandedMatrices.mat",'ExpandedMatrices')
 save("ssSteerAVector.mat", 'steerAngleVector')
 %% Construct gain scheduling algorith 
 % This was a test for the algorithm
-gainStruct = gainScheduling(delta, [OperatingPointsTable.deltaSS(:)], ExpandedMatrices);
+% gainStruct = gainScheduling(delta, [OperatingPointsTable.deltaSS(:)], ExpandedMatrices);
 
 %% Next step: Construct a delta steering input to parse into the system
 
