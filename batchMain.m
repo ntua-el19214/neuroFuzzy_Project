@@ -5,7 +5,7 @@ clear outputFunction
 clear
 
 % Define Runge-Kutta parameters
-a = 0; b = 3; % a (simulation start time), b (simulation end time) in seconds
+a = 0; b = 4; % a (simulation start time), b (simulation end time) in seconds
 N = 500000;   % Number of steps (nodes)
 
 A = [0 0 0 0 0; 1/3 0 0 0 0; 1/6 1/6 0 0 0; 1/8 0 3/8 0 0; 1/2 0 -3/2 2 0];
@@ -31,25 +31,32 @@ vehicle.GR = 15;             % Vehicle gear ratio
 % vehicle.TireMaxFx = maxFxForSaFzCombination();
 vehicle.Motors = Motors('AMK-FSAE Motors Data.xlsx');
 
-v0 = 8;
+v0 = 10;
 
 % Define control parameters and input variables (example values)
 delta = steeringInput(a, b, N, v0, vehicle);    % Steering angle (rad)
-delta = [zeros(1, 100000), delta, zeros(1, (N - length(delta) - 100000))];
+delta = [zeros(1, 30000), delta, zeros(1, (N - length(delta) - 30000))];
 
 % Define multiple simulation variations 
-Q = [1 100 50;...
-    1 100 200;...
-    1 100 400;];
-yaw_rate_results = zeros(length(Q(:,1)), N+1); % To store yaw rate results
+% Q = [2 2 4;
+%     2 2 4;
+%     2 2 4;
+%     2 2 4;
+%     2 2 4];
+Q = [2 2 4];
 
-fxSS = [80;       % Steady state fx FL
-        80;       % Steady state fx FR
-        80;       % Steady state fx RL
-        80;];     % Steady state fx FR
+R = [1];
+
+stateVectorResults = zeros(11, N+1, length(Q(:,1))); % To store yaw rate results
+allMotorTorques = zeros(4, N+1, length(Q(:,1)));
+
+fxSS = [200;       % Steady state fx FL
+        200;       % Steady state fx FR
+        200;       % Steady state fx RL
+        200];     % Steady state fx FR
 
 for i = 1:length(Q(:,1))
-    [ExpandedMatrices, steerAngleVector] = helpSetupTheProblem(Q(i, :));
+    [ExpandedMatrices, steerAngleVector] = helpSetupTheProblem(Q(i, :), R(1));
 
     % Define initial state vector Y0 = [psi_dot, v, beta, accel, beta_dot, omega_FL, omega_FR, omega_RL, omega_RR]
     Y0 = [0;               % Initial yaw rate (psi_dot)
@@ -64,17 +71,24 @@ for i = 1:length(Q(:,1))
           0;
           0];              % Displacement y
 
-    % Simulation time
-    tspan = [0 10];   % Time interval (seconds)
-    
     % Set ODE options with OutputFcn
     ode = @(t, Y, delta, ax, ay) nonLinearVehicleModel(t, Y, delta, ax, ay, vehicle, steerAngleVector, fxSS, ExpandedMatrices);
     
     % Run the ODE solver with options
-    [t, Y, ax, ay] = RKESys(a, b, N, ode, delta, Y0, A, bhta, tau);
+    [t, Y, ax, ay, motorTorques] = RKESys(a, b, N, ode, delta, Y0, A, bhta, tau);
     
-    % Store the yaw rate (Y(1)) at the end of the simulation for this variation
-    yaw_rate_results(i,:) = Y(1, :);
+    % Store the state vector for each iteration
+    for iState =1: length(Y0)
+        stateVectorResults(iState,:, i) = Y(iState, :);
+    end
+
+    % Store motor torque commands for all simulations completed
+    for iMotor = 1:4
+        allMotorTorques(iMotor, :, i) = motorTorques(iMotor, :);
+    end
+
+    % Dimensions of state vector are States x steps x variations of
+    % controller
 end
 %%
 % Display results 
@@ -84,7 +98,7 @@ figure;
 plot(t(2:end), sqrt(Y(2,2:end).^2 + Y(3,2:end).^2) .* delta / vehicle.wb)
 hold on
 for iPlot = 1:length(Q(:,1))
-    plot(t, yaw_rate_results(iPlot,:), 'LineWidth', 1.5);
+    plot(t, stateVectorResults(1,:,iPlot), 'LineWidth', 1.5);
     legendObject = [legendObject, "Yaw Rate " + mat2str(Q(iPlot,:))];
 end
 legendObject = ["Desired Yaw Rate", legendObject];
@@ -93,3 +107,92 @@ title('Yaw Rate vs Time');
 xlabel('Time (s)');
 ylabel('Yaw Rate (rad/s)');
 grid on;
+hold off
+
+figure('Position',[100 100 1400 400]);
+legendObject = [];
+numPlots = length(Q(:,1)); % Number of trajectories
+
+% Create a tiled layout for better management of subplots and colorbars
+tiledlayout(1, numPlots, 'Padding', 'compact', 'TileSpacing', 'compact');
+
+for iPlot = 1:numPlots
+    nexttile;
+    cmap = 'winter'; 
+    colormap(cmap);  
+
+    scatter(stateVectorResults(9,:,iPlot), stateVectorResults(10,:,iPlot), 24, t, ...
+            'Marker', '.');
+    title(['Trajectory ', mat2str(Q(iPlot,:))]);
+    
+    % Add labels for axes
+    xlabel('X (m)');
+    ylabel('Y (m)');
+    grid on;
+    legendObject = [legendObject, "Trajectory  " + mat2str(Q(iPlot,:))];
+    title("Trajectory  " + mat2str(Q(iPlot,:)))
+end
+c = colorbar;
+c.Label.String = 'Time (s)'; 
+grid on;
+
+
+%% plot velocity
+figure 
+plot(t(2:end), sqrt(Y(2,2:end).^2 + Y(3,2:end).^2))
+
+
+%% Plot each wheel
+% Motor torque plotting
+figure
+hold on
+for i = 1:4
+    subplot(2, 2, i);
+    hold on
+    for iFigure = 1:length(Q(:,1))
+        plot(t, allMotorTorques(i, :, iFigure), 'DisplayName', "Trajectory  " + mat2str(Q(iFigure,:)));
+        title(['Wheel Motor Torque ', num2str(i), ' Over Time']);
+        xlabel('Time (s)');
+        ylabel('Motor Torque (Nm)');
+        grid on
+    end
+    hold off
+end
+% add a bit space to the figure
+fig = gcf;
+fig.Position(3) = fig.Position(3) + 400;
+% add legend
+Lgnd = legend('show');
+Lgnd.Position(1) = 0.01;
+Lgnd.Position(2) = 0.4;
+hold off
+
+% Wheel angular velocity plots
+figure 
+hold on
+for i = 1:4
+    subplot(2, 2, i);
+    hold on
+    for iFigure = 1:length(Q(:,1))
+        plot(t, stateVectorResults(i+3, :, iFigure), 'DisplayName', "Trajectory  " + mat2str(Q(iFigure,:)));
+        title(['Wheel Speed ', num2str(i), ' Over Time']);
+        xlabel('Time (s)');
+        ylabel('Motor Speed (rad/s)');
+        grid on
+    end
+    hold off
+end
+% add a bit space to the figure
+fig = gcf;
+fig.Position(3) = fig.Position(3) + 400;
+% add legend
+Lgnd = legend('show');
+Lgnd.Position(1) = 0.01;
+Lgnd.Position(2) = 0.4;
+hold off
+
+
+
+%% plot vy
+figure 
+plot(t, Y(3,:))

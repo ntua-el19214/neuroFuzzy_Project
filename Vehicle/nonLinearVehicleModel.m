@@ -1,4 +1,4 @@
-function [x_dot]= nonLinearVehicleModel(t, Y, delta, ax, ay, vehicle, ssVectorSA, fxSS ,ExpandedMatrices)
+function [x_dot, Tmotor]= nonLinearVehicleModel(t, Y, delta, ax, ay, vehicle, ssVectorSA, fxSS ,ExpandedMatrices)
 % NONLINEARVEHICLEMODEL describes the non-linear equations that dictate vehicle dynamics
 
 % Initialize integral term for yaw control
@@ -11,6 +11,15 @@ function [x_dot]= nonLinearVehicleModel(t, Y, delta, ax, ay, vehicle, ssVectorSA
 % end
 
 g = 9.81; % Gravitational acceleration
+if t > 0.26
+    peos = 7;
+    if t> 0.28
+        peos = 9;
+        if t> 0.3
+            peos = 10;
+        end
+    end
+end
 
 % Extract state variables
 psi_dot  = Y(1);  % Yaw rate
@@ -25,7 +34,7 @@ disp_x   = Y(9);
 disp_y   = Y(10);
 psi      = Y(11);
 
-b = atan2(vy, vx);
+b = atan(vy/vx);
 
 % Vehicle geometry and load distribution
 lf = vehicle.wb * (1 - vehicle.wd);
@@ -76,7 +85,7 @@ vx_dot = 1 / vehicle.m * ((Fx_fl + Fx_fr)*cos(delta) + Fx_rl + Fx_rr...
                            - 1/2 * 1.224 * vehicle.cd * vx^2) + psi_dot*vy;
                             
 vy_dot = 1 / vehicle.m * ((Fx_fl + Fx_fr)*sin(delta) ...
-                           +(Fy_fl + Fy_fr)*sin(delta) + Fy_rl + Fy_rr)...
+                           +(Fy_fl + Fy_fr)*cos(delta) + Fy_rl + Fy_rr)...
                            - psi_dot*vx;
 
 % ψ_ddot (yaw acceleration)
@@ -90,13 +99,15 @@ yaw_error = psi_dot_desired - psi_dot;
 
 gainStruct = gainScheduling(delta, ssVectorSA, ExpandedMatrices);
 input = yaw_error * gainStruct.Kp + i_error * gainStruct.Ki - gainStruct.Kr * [b; psi_dot] +fxSS;
+% input = yaw_error * gainStruct.Kp + i_error * gainStruct.Ki +fxSS;
 slipAngleMatrix = [slipAngle_FL, slipAngle_FR, slipAngle_RL, slipAngle_RR];
 fzMatrix = [Fz_fl, Fz_fr, Fz_rl, Fz_rr];
 omegaMatrix = [omega_FL, omega_FR, omega_RL, omega_RR];
 
 Tmotor = motorTorque(vehicle, input, slipAngleMatrix, fzMatrix, omegaMatrix);
 
-% Tmotor = 120/vehicle.GR*vehicle.R*ones(4,1);
+% Tmotor = 200/vehicle.GR*vehicle.R*ones(1,4);
+% Tmotor = Tmotor.*[0 0 1 1];
 
 omega_FL_dot = (Tmotor(1)*vehicle.GR - Fx_fl * vehicle.R - 0.03*Fz_fl) / vehicle.Jw;
 omega_FR_dot = (Tmotor(2)*vehicle.GR - Fx_fr * vehicle.R - 0.03*Fz_fr) / vehicle.Jw;

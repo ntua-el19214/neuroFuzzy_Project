@@ -5,7 +5,7 @@ clear outputFunction
 clear
 
 % Define Runge-Kuta parameters
-a = 0; b = 3; % a (simulation start time), b (simulation end time) in seconds
+a = 0; b = 4; % a (simulation start time), b (simulation end time) in seconds
 N = 500000;   % Number of steps (nodes)
 
 A = [0 0 0 0 0; 1/3 0 0 0 0; 1/6 1/6 0 0 0; 1/8 0 3/8 0 0; 1/2 0 -3/2 2 0];

@@ -1,4 +1,4 @@
-function [ExpandedMatrices, steerAngleVector] = helpSetupTheProblem(Q)
+function [ExpandedMatrices, steerAngleVector] = helpSetupTheProblem(Q, ratio)
 % Define symbolic variables
 syms Fx_fl Fx_fr Fx_rl Fx_rr Fy_fl Fy_fr Fy_rl Fy_rr F_Drag D b v psi_dot
 syms m Jz lf lr bf br
@@ -59,12 +59,12 @@ disp(['d(psi_ddot)/d(Fx_rr) = ', char(partial_psi_ddot_Fx_rr)]);
 
 % Vehicle parameters
 m = 270;
-v = 15;
+v = 10;
 bf = 1.22;
 br = 1.22;
 lf = 0.5*1.57;
 lr = 0.5*1.57;
-Jz = 75;
+Jz = 100;
 F_Drag = 0.5*1.224*1.7*v^2;
 
 %% Choose Linearization Points
@@ -180,10 +180,10 @@ for i = 1:5
         solutions{i}.Fx_rr =double(solution.Fx_rr);
     else 
         % Maybe solve for actual resistance on the straight.
-        solutions{i}.Fx_fl = 30.6;
-        solutions{i}.Fx_fr = 30.6;
-        solutions{i}.Fx_rl = 30.6;
-        solutions{i}.Fx_rr = 30.6;
+        solutions{i}.Fx_fl = 53.6782;
+        solutions{i}.Fx_fr = 53.6782;
+        solutions{i}.Fx_rl = 53.6782;
+        solutions{i}.Fx_rr = 53.6782;
     end
 
     % Evaluate and display the solution
@@ -203,7 +203,7 @@ for i =3:3
     D = OperatingPointsTable.deltaSS(i);
     b = D; % Assuming b = delta as per previous calculations
     psi_dot = v * D / (lf + lr);
-    F_Drag = 0.5 * 1.224 * 1.7 * v^2;
+    F_Drag = 0.5 * 1.224 * 2 * v^2;
     
     % Solve the equations to find the forces
     solution = solutions{i}; % Obtain the solution for this operating point
@@ -261,18 +261,23 @@ for i = 3:3
 
     % Define the weights for the cost function
     Q_mat = diag(Q); % Adjust weights as necessary
-    R = 1 * eye(4); % Adjust R matrix size if needed
+    R = 0.001 * eye(4); % Adjust R matrix size if needed
 
     % Calculate the controller gain using icare
     [~, K, ~] = icare(A_ex, B_ex, Q_mat, R);
-
-    pScaleFactor = 0.4;
+    % actK = -K;
+    % K = actK;
+    frontToRearRatio = ones(4,3);
+    frontToRearRatio(1:2, :) = frontToRearRatio(1:2, :).*ratio;
+    frontToRearRatio(3:4, :) = frontToRearRatio(3:4, :)./ratio;
+    K = K.*frontToRearRatio;
+    pScaleFactor = 0.5;
     % Store the expanded matrices and controller gain in the structure
     ExpandedMatrices(i).A_ex = A_ex;
     ExpandedMatrices(i).B_ex = B_ex;
     ExpandedMatrices(i).Kr = [K(:,1) K(:,2)*(1-pScaleFactor)];
     ExpandedMatrices(i).Ki = K(:,3);
-    ExpandedMatrices(i).Kp = K(:,2)*pScaleFactor;
+    ExpandedMatrices(i).Kp = K(:,2);
 
 
     % Display the results for this operating point

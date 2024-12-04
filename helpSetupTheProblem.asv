@@ -1,6 +1,6 @@
-function [ExpandedMatrices, steerAngleVector] = helpSetupTheProblem()
+function [ExpandedMatrices, steerAngleVector] = helpSetupTheProblem(Q)
 % Define symbolic variables
-syms Fx_fl Fx_fr Fx_rl Fx_rr Fy_fl Fy_fr Fy_rl Fy_rr F_Drag delta b v psi_dot
+syms Fx_fl Fx_fr Fx_rl Fx_rr Fy_fl Fy_fr Fy_rl Fy_rr F_Drag D b v psi_dot
 syms m Jz lf lr bf br
 
 % Define the approximations
@@ -8,16 +8,16 @@ syms m Jz lf lr bf br
 % sin_b_approx = b;  % sin(b) ≈ b
 
 % Substitute the approximations in the original equations
-b_dot = (1/m/v) * ((Fx_fl + Fx_fr) * sin(delta - b) ...
-                 + (Fy_fl + Fy_fr) * cos(delta - b) ...
+b_dot = (1/m/v) * ((Fx_fl + Fx_fr) * sin(D - b) ...
+                 + (Fy_fl + Fy_fr) * cos(D - b) ...
                  - (Fx_rl + Fx_rr) * sin(b) ...
                  + (Fy_rl + Fy_rr) * cos(b) ...
                  + F_Drag * sin(b) ) - psi_dot;
 
-psi_ddot = (1/Jz) * (lf * ((Fx_fl + Fx_fr) * sin(delta) + (Fy_fl + Fy_fr) * cos(delta)) ...
+psi_ddot = (1/Jz) * (lf * ((Fx_fl + Fx_fr) * sin(D) + (Fy_fl + Fy_fr) * cos(D)) ...
                     - lr * (Fy_rl + Fy_rr) ...
-                    + bf/2 * (-Fx_fl + Fx_fr) * cos(delta) ...
-                    - (-Fy_fl + Fy_fr) * sin(delta) ...
+                    + bf/2 * (-Fx_fl + Fx_fr) * cos(D) ...
+                    - (-Fy_fl + Fy_fr) * sin(D) ...
                     + br/2 * (Fx_rr - Fx_rl));
 
 % Compute partial derivatives with respect to the specified variables
@@ -59,12 +59,12 @@ disp(['d(psi_ddot)/d(Fx_rr) = ', char(partial_psi_ddot_Fx_rr)]);
 
 % Vehicle parameters
 m = 270;
-v = 15;
+v = 10;
 bf = 1.22;
 br = 1.22;
 lf = 0.5*1.57;
 lr = 0.5*1.57;
-Jz = 75;
+Jz = 100;
 F_Drag = 0.5*1.224*1.7*v^2;
 
 %% Choose Linearization Points
@@ -131,17 +131,17 @@ for i = 1:5
     syms Fx_fl Fx_fr Fx_rl Fx_rr real
     % Extract operating point values
     v = OperatingPointsTable.vSS(i);
-    delta = OperatingPointsTable.deltaSS(i);
-    psi_dot = v * delta / (lf + lr);
-    if delta == 0
+    D = OperatingPointsTable.deltaSS(i);
+    psi_dot = v * D / (lf + lr);
+    if D == 0
         latAcc = 0;
         % Fx_rl = 200;
         % Fx_rr = 200;
     end
-    b = delta;
+    b = D;
     F_Drag = 0.5 * 1.224 * 1.7 * v^2;
     F_Df   = 0.5*1.224*7.2*v^2;
-    wty    = -sign(delta)*latAcc*9.81*m*0.3/((bf+br)/2); % lateral weight transfer
+    wty    = -sign(D)*latAcc*9.81*m*0.3/((bf+br)/2); % lateral weight transfer
 
     totalFz = F_Df+m*9.81;
     totalFy = latAcc*9.81*m;
@@ -157,33 +157,33 @@ for i = 1:5
     Fy_rr  = Fz_rr/totalFz*totalFy;
 
     % Define the equations
-    E(1) = (1/m/v) * ((Fx_fl + Fx_fr) * sin(delta - b) ...
-                 - (Fy_fl + Fy_fr) * cos(delta - b) ...
+    E(1) = (1/m/v) * ((Fx_fl + Fx_fr) * sin(D - b) ...
+                 - (Fy_fl + Fy_fr) * cos(D - b) ...
                  + (Fx_rl + Fx_rr) * sin(b) ...
                  + (Fy_rl + Fy_rr) * cos(b) ...
                  + F_Drag * sin(b) ) - psi_dot == 0;
     
-    E(2) = (1 / Jz) * (lf * ((Fx_fl + Fx_fr) * sin(delta) + (Fy_fl + Fy_fr) * cos(delta)) ...
+    E(2) = (1 / Jz) * (lf * ((Fx_fl + Fx_fr) * sin(D) + (Fy_fl + Fy_fr) * cos(D)) ...
            - lr * (Fy_rl + Fy_rr) ...
-           + bf / 2 * (-Fx_fl + Fx_fr) * cos(delta) ...
-           - (-Fy_fl + Fy_fr) * sin(delta) ...
+           + bf / 2 * (-Fx_fl + Fx_fr) * cos(D) ...
+           - (-Fy_fl + Fy_fr) * sin(D) ...
            + br / 2 * (Fx_rr - Fx_rl)) == 0;
 
     E(3) = Fx_fl == Fx_rl;
     E(4) = Fx_fr == Fx_rr;
 
     solution = solve(E, [Fx_fl Fx_fr Fx_rl Fx_rr], 'ReturnConditions', true);
-    if delta~=0
+    if D~=0
         solutions{i}.Fx_fl =double(solution.Fx_fl);
         solutions{i}.Fx_fr =double(solution.Fx_fr);
         solutions{i}.Fx_rl =double(solution.Fx_rl);
         solutions{i}.Fx_rr =double(solution.Fx_rr);
     else 
         % Maybe solve for actual resistance on the straight.
-        solutions{i}.Fx_fl = 30.6;
-        solutions{i}.Fx_fr = 30.6;
-        solutions{i}.Fx_rl = 30.6;
-        solutions{i}.Fx_rr = 30.6;
+        solutions{i}.Fx_fl = 53.6782;
+        solutions{i}.Fx_fr = 53.6782;
+        solutions{i}.Fx_rl = 53.6782;
+        solutions{i}.Fx_rr = 53.6782;
     end
 
     % Evaluate and display the solution
@@ -200,10 +200,10 @@ disp(OperatingPointsTable);
 for i =3:3
     % Extract operating point values
     v = OperatingPointsTable.vSS(i);
-    delta = OperatingPointsTable.deltaSS(i);
-    b = delta; % Assuming b = delta as per previous calculations
-    psi_dot = v * delta / (lf + lr);
-    F_Drag = 0.5 * 1.224 * 1.7 * v^2;
+    D = OperatingPointsTable.deltaSS(i);
+    b = D; % Assuming b = delta as per previous calculations
+    psi_dot = v * D / (lf + lr);
+    F_Drag = 0.5 * 1.224 * 2 * v^2;
     
     % Solve the equations to find the forces
     solution = solutions{i}; % Obtain the solution for this operating point
@@ -220,7 +220,7 @@ for i =3:3
     Fy_rr_val = double(Fy_rr);
     
     % Calculate a11 using the provided formula
-    a11 = -(sin(b)*(Fy_rl_val + Fy_rr_val) - cos(b)*(Fx_rl_val + Fx_rr_val) + cos(b - delta)*(Fx_fl_val + Fx_fr_val) - sin(b - delta)*(Fy_fl_val + Fy_fr_val) + F_Drag*cos(b))/(m*v);
+    a11 = -(sin(b)*(Fy_rl_val + Fy_rr_val) - cos(b)*(Fx_rl_val + Fx_rr_val) + cos(b - D)*(Fx_fl_val + Fx_fr_val) - sin(b - D)*(Fy_fl_val + Fy_fr_val) + F_Drag*cos(b))/(m*v);
     a12 = -1;
     
     % Construct the A matrix
@@ -228,8 +228,8 @@ for i =3:3
          0   0 ];
     
     % Construct the B matrix
-    B = [-sin(b - delta)/(m*v) -sin(b - delta)/(m*v) sin(b)/(m*v) sin(b)/(m*v);
-         -((bf*cos(delta))/2 - lf*sin(delta))/Jz ((bf*cos(delta))/2 + lf*sin(delta))/Jz -br/(2*Jz) br/(2*Jz)];
+    B = [-sin(b - D)/(m*v) -sin(b - D)/(m*v) sin(b)/(m*v) sin(b)/(m*v);
+         -((bf*cos(D))/2 - lf*sin(D))/Jz ((bf*cos(D))/2 + lf*sin(D))/Jz -br/(2*Jz) br/(2*Jz)];
     
     % Construct the C matrix
     C = [0 1];
@@ -260,13 +260,14 @@ for i = 3:3
     B_ex = [B; [0 0 0 0]];
 
     % Define the weights for the cost function
-    Q = diag([1000 100 50]); % Adjust weights as necessary
-    R = 1 * eye(4); % Adjust R matrix size if needed
+    Q_mat = diag(Q); % Adjust weights as necessary
+    R = 0.001 * eye(4); % Adjust R matrix size if needed
 
     % Calculate the controller gain using icare
-    [~, K, ~] = icare(A_ex, B_ex, Q, R);
-
-    pScaleFactor = 0.4;
+    [~, K, ~] = icare(A_ex, B_ex, Q_mat, R);
+    % actK = -K;
+    % K = actK;
+    pScaleFactor = 0.55;
     % Store the expanded matrices and controller gain in the structure
     ExpandedMatrices(i).A_ex = A_ex;
     ExpandedMatrices(i).B_ex = B_ex;
