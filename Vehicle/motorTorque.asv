@@ -38,8 +38,8 @@ function Tmotor = motorTorque(vehicle, input, slipAngleMatrix, wheel_fz_array, w
 Tmotor= zeros(4,1);
 for iMotor=1:length(wheel_omega_array)
     maxGripLimitedFx = vehicle.TireMaxFx(slipAngleMatrix(iMotor), wheel_fz_array(iMotor))*0.95;
-    maxGripLimitedTorque = maxGripLimitedFx/vehicle.GR*vehicle.R;
+    maxGripLimitedTorque = maxGripLimitedFx
 
-    Tmotor(iMotor) = max(min(min(max(vehicle.Motors(wheel_omega_array(iMotor)*vehicle.GR)), (input(iMotor))/vehicle.GR*vehicle.R), maxGripLimitedTorque),0);
+    Tmotor(iMotor) = min(min(max(vehicle.Motors(wheel_omega_array(iMotor)*vehicle.GR)), (input(iMotor))/vehicle.GR*vehicle.R), );
 end
 
