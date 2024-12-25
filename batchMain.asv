@@ -363,9 +363,10 @@ xlabel('Time (s)');
 grid on;
 hold on
 plot(t(2:end), yawError * ExpandedMatrices.Kp(1), 'LineWidth', 2, 'DisplayName',"Proportional Input");
-plot(t(2:end),stateVectorResults.state(8, 2:end) * ExpandedMatrices.Ki(1), 'LineWidth', 2, 'DisplayName',"Integral Input");
-plot(t(2:end),-ExpandedMatrices.Kr(1, :)*[beta;stateVectorResults.state(1, 2:end)], 'LineWidth', 2, 'DisplayName',"Regulate Input");
+plot(t(2:end),stateVectorResults.state(1, 2:end) * ExpandedMatrices.Ki(1), 'LineWidth', 2, 'DisplayName',"Integral Input");
+plot(t(2:end),ExpandedMatrices.Kr(1, :)*[beta';stateVectorResults.state(1, 2:end)], 'LineWidth', 2, 'DisplayName',"Regulate Input");
 title('Yaw Error Over Time');
 xlabel('Time (s)');
 ylabel('Magnitude');
 legend('show')
+input = +yaw_error * gainStruct.Kp + i_error * gainStruct.Ki - gainStruct.Kr * [b; psi_dot] +fxSS;
