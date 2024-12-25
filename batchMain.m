@@ -19,7 +19,7 @@ vehicle.tf = 1.22;           % Track width front (m)
 vehicle.tr = 1.22;           % Track width rear (m)
 vehicle.R = 0.21;            % Wheel radius (m)
 vehicle.CoGz = 0.3;          % Center of Gravity height (m)
-vehicle.Jz = 100;            % Yaw moment of inertia (kg*m^2)
+vehicle.Jz = 100;             % Yaw moment of inertia (kg*m^2)
 vehicle.Jw = 0.2;            % Wheel inertia (kg*m^2)
 vehicle.GR = 15;             % Vehicle gear ratio
 % vehicle.TireMaxFx = maxFxForSaFzCombination();
@@ -32,10 +32,11 @@ v0 = 12;
 % delta = [zeros(1, 30000), delta, zeros(1, (N - length(delta) - 30000))];
 
 % Define multiple simulation variations 
-Q = [5 10 2.5;
-    25 50 7.25;
-    50 100 15];
-% Q = [0.1 0.25 0.1];
+% Q = [25 50 7.25;
+%     50 100 15;
+%     50 100 2.5;
+%     75 150 7.5];
+Q = [5 90 7.5];
 
 R = [1];
 
@@ -48,8 +49,8 @@ allFyForces   = [];
 allFzForces   = [];
 times = [];
 
-fxSS = [100;       % Steady state fx FL
-        100;       % Steady state fx FR
+fxSS = [150;       % Steady state fx FL
+        150;       % Steady state fx FR
         200;       % Steady state fx RL
         200];     % Steady state fx FR
 
@@ -182,10 +183,9 @@ legendObject = [];
 figure;
 
 steerVector = @(t) arrayfun(@(t_scalar) deltaFunc(t_scalar), t);
-
+desiredYawRate = [logData.aux.psiDotTarg];
 % Desired yaw rate
-desiredYawRate = sqrt(Y(:,2).^2 + Y(:,3).^2) .* steerVector(times(end).times) / vehicle.wb; 
-plot(t, desiredYawRate, 'LineWidth', 2, 'DisplayName', "Desired Yaw Rate");
+plot(t(2:end), desiredYawRate, 'LineWidth', 2, 'DisplayName', "Desired Yaw Rate");
 hold on;
 
 % Yaw rate for each Q configuration
@@ -345,3 +345,27 @@ for iField = 1:length(fieldNames)
     hold off;
 end
 
+% Plot side slip angle
+beta = [logData.aux(:).b];
+figure;
+plot(t(2:end), beta, 'LineWidth', 2);
+title('Side Slip angle Over Time');
+xlabel('Time (s)');
+ylabel('Velocity (m/s)');
+grid on;
+
+% Plot side slip angle
+yawError = [logData.aux.yawError];
+figure;
+plot(t(2:end), yawError, 'LineWidth', 2, 'DisplayName',"Yaw Error");
+title('Yaw Error Over Time');
+xlabel('Time (s)');
+grid on;
+hold on
+plot(t(2:end), yawError * ExpandedMatrices.Kp(1), 'LineWidth', 2, 'DisplayName',"Proportional Input");
+plot(t(2:end),stateVectorResults.state(8, 2:end) * ExpandedMatrices.Ki(1), 'LineWidth', 2, 'DisplayName',"Integral Input");
+plot(t(2:end),-ExpandedMatrices.Kr(1, :)*[beta;stateVectorResults.state(1, 2:end)], 'LineWidth', 2, 'DisplayName',"Regulate Input");
+title('Yaw Error Over Time');
+xlabel('Time (s)');
+ylabel('Magnitude');
+legend('show')

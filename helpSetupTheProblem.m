@@ -271,12 +271,12 @@ for i = 3:3
     frontToRearRatio(1:2, :) = frontToRearRatio(1:2, :).*ratio;
     frontToRearRatio(3:4, :) = frontToRearRatio(3:4, :)./(ratio);
     K = K.*frontToRearRatio;
-    pScaleFactor = 0.5;
+    pScaleFactor = 0.70;
     % Store the expanded matrices and controller gain in the structure
     ExpandedMatrices(i).A_ex = A_ex;
     ExpandedMatrices(i).B_ex = B_ex;
     ExpandedMatrices(i).Kr = [K(:,1) K(:,2)*(1-pScaleFactor)];
-    ExpandedMatrices(i).Ki = -K(:,3);
+    ExpandedMatrices(i).Ki = K(:,3);
     ExpandedMatrices(i).Kp = K(:,2);
 
 

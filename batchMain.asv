@@ -19,7 +19,7 @@ vehicle.tf = 1.22;           % Track width front (m)
 vehicle.tr = 1.22;           % Track width rear (m)
 vehicle.R = 0.21;            % Wheel radius (m)
 vehicle.CoGz = 0.3;          % Center of Gravity height (m)
-vehicle.Jz = 100;            % Yaw moment of inertia (kg*m^2)
+vehicle.Jz = 100;             % Yaw moment of inertia (kg*m^2)
 vehicle.Jw = 0.2;            % Wheel inertia (kg*m^2)
 vehicle.GR = 15;             % Vehicle gear ratio
 % vehicle.TireMaxFx = maxFxForSaFzCombination();
@@ -32,14 +32,13 @@ v0 = 12;
 % delta = [zeros(1, 30000), delta, zeros(1, (N - length(delta) - 30000))];
 
 % Define multiple simulation variations 
-% Q = [1 5 0.2;
-%     1 5 0.6;
-%     1 5 1.2;
-%     1 5 4;
-%     2 5 4];
-Q = [0.1 0.25 0.1];
+% Q = [25 50 7.25;
+%     50 100 15;
+%     50 100 2.5;
+%     75 150 7.5];
+Q = [5 90 7.5];
 
-R = [0.5];
+R = [1];
 
 stateVectorResults = []; % To store yaw rate results
 allMotorTorques = [];
@@ -50,8 +49,8 @@ allFyForces   = [];
 allFzForces   = [];
 times = [];
 
-fxSS = [0;       % Steady state fx FL
-        0;       % Steady state fx FR
+fxSS = [150;       % Steady state fx FL
+        150;       % Steady state fx FR
         200;       % Steady state fx RL
         200];     % Steady state fx FR
 
@@ -71,12 +70,17 @@ for i = 1:length(Q(:,1))
           0;
           0];              % Displacement y
 
-    delta = @(t) deltaFunc(t);
 
-    options = odeset('OutputFcn', @(t, Y, flag) vehicleOutputFcn(t, Y, flag, deltaFunc(t), vehicle, steerAngleVector, fxSS, ExpandedMatrices), ...
-                 'Refine', 1, 'OutputSel', []);
-    
+    hWaitBar = waitbar(0, 'Solving ODE...');
+    delta = @(t) deltaFunc(t);
     tspan = [a  b];
+    options = odeset('OutputFcn', @(t, Y, flag) vehicleOutputFcn(t, Y, flag, deltaFunc(t), vehicle, steerAngleVector, fxSS, ExpandedMatrices, tspan, hWaitBar), ...
+                 'Refine', 1, ...              % Increase the refinement level (default is 1)
+                 'RelTol', 1e-6, ...           % Set a smaller relative tolerance for higher accuracy
+                 'AbsTol', 1e-8, ...           % Set a smaller absolute tolerance for higher accuracy
+                 'OutputSel', [], ...
+                 'Stats', 'on');               % Optional: Display solver statistics
+
     % Run the solver
     [t, Y] = ode45(@(t, Y) nonLinearVehicleModel(t, Y, delta(t), vehicle, steerAngleVector, fxSS, ExpandedMatrices), tspan, Y0, options);
 
@@ -127,9 +131,48 @@ for i = 1:length(Q(:,1))
         theseSlipRatios.RR(iStep) = logData.aux(iStep).slipRatios.RR;
     end
 
+    % Fx forces
+    theseFx = struct ('FL', zeros(1, length(Y(:,1))),...
+                              'FR', zeros(1, length(Y(:,1))),...
+                              'RL', zeros(1, length(Y(:,1))),...
+                              'RR', zeros(1, length(Y(:,1)))); 
+    for iStep = 1:length(Y(:,1))-1
+        theseFx.FL(iStep) = logData.aux(iStep).Forces.Fx.FL;
+        theseFx.FR(iStep) = logData.aux(iStep).Forces.Fx.FR;
+        theseFx.RL(iStep) = logData.aux(iStep).Forces.Fx.RL;
+        theseFx.RR(iStep) = logData.aux(iStep).Forces.Fx.RR;
+    end
+
+    % Fy forces
+    theseFy = struct ('FL', zeros(1, length(Y(:,1))),...
+                              'FR', zeros(1, length(Y(:,1))),...
+                              'RL', zeros(1, length(Y(:,1))),...
+                              'RR', zeros(1, length(Y(:,1)))); 
+    for iStep = 1:length(Y(:,1))-1
+        theseFy.FL(iStep) = logData.aux(iStep).Forces.Fy.FL;
+        theseFy.FR(iStep) = logData.aux(iStep).Forces.Fy.FR;
+        theseFy.RL(iStep) = logData.aux(iStep).Forces.Fy.RL;
+        theseFy.RR(iStep) = logData.aux(iStep).Forces.Fy.RR;
+    end
+
+    % Fz forces
+    theseFz = struct ('FL', zeros(1, length(Y(:,1))),...
+                              'FR', zeros(1, length(Y(:,1))),...
+                              'RL', zeros(1, length(Y(:,1))),...
+                              'RR', zeros(1, length(Y(:,1)))); 
+    for iStep = 1:length(Y(:,1))-1
+        theseFz.FL(iStep) = logData.aux(iStep).Forces.Fz.FL;
+        theseFz.FR(iStep) = logData.aux(iStep).Forces.Fz.FR;
+        theseFz.RL(iStep) = logData.aux(iStep).Forces.Fz.RL;
+        theseFz.RR(iStep) = logData.aux(iStep).Forces.Fz.RR;
+    end
+
     allMotorTorques = [allMotorTorques theseMotorTorques];
     allSlipAngles = [allSlipAngles theseSlipAngles];
     allSlipRatios = [allSlipRatios theseSlipRatios];
+    allFxForces   = [allFxForces theseFx];
+    allFyForces   = [allFyForces theseFy];
+    allFzForces   = [allFzForces theseFz];
 
     % Dimensions of state vector are States x steps x variations of
     % controller
@@ -140,10 +183,9 @@ legendObject = [];
 figure;
 
 steerVector = @(t) arrayfun(@(t_scalar) deltaFunc(t_scalar), t);
-
+desiredYawRate = [logData.aux.psiDotTarg];
 % Desired yaw rate
-desiredYawRate = sqrt(Y(:,2).^2 + Y(:,3).^2) .* steerVector(times(end).times) / vehicle.wb; 
-plot(t, desiredYawRate, 'LineWidth', 2, 'DisplayName', "Desired Yaw Rate");
+plot(t(2:end), desiredYawRate, 'LineWidth', 2, 'DisplayName', "Desired Yaw Rate");
 hold on;
 
 % Yaw rate for each Q configuration
@@ -250,3 +292,81 @@ for iField = 1:length(fieldNames)
     hold off;
 end
 
+%% Wheel Forces
+% Wheel Fx forces
+figure;
+fieldNames = string(fieldnames(allFxForces));
+for iField = 1:length(fieldNames)
+    subplot(2, 2, iField);
+    hold on;
+    for iFigure = 1:length(Q(:,1))
+        plot(times(iFigure).times, allFxForces(iFigure).(fieldNames(iField))', 'DisplayName', "Trajectory " + mat2str(Q(iFigure,:)));
+    end
+    title(['Fx - Wheel ', num2str(i)]);
+    xlabel('Time (s)');
+    ylabel('Fx (N)');
+    grid on;
+    legend show;
+    hold off;
+end
+
+% Wheel Fy forces
+figure;
+fieldNames = string(fieldnames(allFyForces));
+for iField = 1:length(fieldNames)
+    subplot(2, 2, iField);
+    hold on;
+    for iFigure = 1:length(Q(:,1))
+        plot(times(iFigure).times, allFyForces(iFigure).(fieldNames(iField))', 'DisplayName', "Trajectory " + mat2str(Q(iFigure,:)));
+    end
+    title(['Fy - Wheel ', num2str(i)]);
+    xlabel('Time (s)');
+    ylabel('Fy (N)');
+    grid on;
+    legend show;
+    hold off;
+end
+
+
+% Wheel Fz forces
+figure;
+fieldNames = string(fieldnames(allFzForces));
+for iField = 1:length(fieldNames)
+    subplot(2, 2, iField);
+    hold on;
+    for iFigure = 1:length(Q(:,1))
+        plot(times(iFigure).times, allFzForces(iFigure).(fieldNames(iField))', 'DisplayName', "Trajectory " + mat2str(Q(iFigure,:)));
+    end
+    title(['Fz - Wheel ', num2str(i)]);
+    xlabel('Time (s)');
+    ylabel('Fz (N)');
+    grid on;
+    legend show;
+    hold off;
+end
+
+% Plot side slip angle
+beta = [logData.aux(:).b];
+figure;
+plot(t(2:end), beta, 'LineWidth', 2);
+title('Side Slip angle Over Time');
+xlabel('Time (s)');
+ylabel('Velocity (m/s)');
+grid on;
+
+% Plot side slip angle
+yawError = [logData.aux.yawError];
+figure;
+plot(t(2:end), yawError, 'LineWidth', 2, 'DisplayName',"Yaw Error");
+title('Yaw Error Over Time');
+xlabel('Time (s)');
+grid on;
+hold on
+plot(t(2:end), yawError * ExpandedMatrices.Kp(1), 'LineWidth', 2, 'DisplayName',"Proportional Input");
+plot(t(2:end),stateVectorResults.state(1, 2:end) * ExpandedMatrices.Ki(1), 'LineWidth', 2, 'DisplayName',"Integral Input");
+plot(t(2:end),ExpandedMatrices.Kr(1, :)*[beta';stateVectorResults.state(1, 2:end)], 'LineWidth', 2, 'DisplayName',"Regulate Input");
+title('Yaw Error Over Time');
+xlabel('Time (s)');
+ylabel('Magnitude');
+legend('show')
+input = +yaw_error * gainStruct.Kp + i_error * gainStruct.Ki - gainStruct.Kr * [b; psi_dot] +fxSS;

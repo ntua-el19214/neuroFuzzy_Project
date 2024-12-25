@@ -92,7 +92,7 @@ omegaMatrix = [omega_FL, omega_FR, omega_RL, omega_RR];
 Tmotor = motorTorque(vehicle, input, slipAngleMatrix, fzMatrix, omegaMatrix);
 
 % Tmotor = 200/vehicle.GR*vehicle.R*ones(1,4);
-% Tmotor = Tmotor.*[0 0 1 1];
+% Tmotor = Tmotor.*[0.1 0.1 1 1];
 
 omega_FL_dot = (Tmotor(1)*vehicle.GR - Fx_fl * vehicle.R - 0.03*Fz_fl) / vehicle.Jw;
 omega_FR_dot = (Tmotor(2)*vehicle.GR - Fx_fr * vehicle.R - 0.03*Fz_fr) / vehicle.Jw;
@@ -123,5 +123,7 @@ aux.MotorTorques = struct('FL', Tmotor(1), 'FR', Tmotor(2), 'RL', Tmotor(3), 'RR
 aux.SlipAngles   = struct('FL', slipAngle_FL, 'FR', slipAngle_FR, 'RL', slipAngle_RL, 'RR', slipAngle_RR);
 aux.SlipRatios   = struct('FL', slip_FL, 'FR', slip_FR, 'RL', slip_RL, 'RR', slip_RR);
 aux.yawError 	 = yaw_error;
+aux.b            = b;
+aux.psiDotTarg   = psi_dot_desired;
 
 end
