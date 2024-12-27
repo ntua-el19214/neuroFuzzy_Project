@@ -27,10 +27,6 @@ vehicle.Motors = Motors('AMK-FSAE Motors Data.xlsx');
 
 v0 = 12;
 
-% Define control parameters and input variables (example values)
-% delta = steeringInput(a, b, N, v0, vehicle);    % Steering angle (rad)
-% delta = [zeros(1, 30000), delta, zeros(1, (N - length(delta) - 30000))];
-
 % Define multiple simulation variations 
 % Q = [25 50 7.25;
 %     50 100 15;
@@ -49,10 +45,17 @@ allFyForces   = [];
 allFzForces   = [];
 times = [];
 
-fxSS = [150;       % Steady state fx FL
-        150;       % Steady state fx FR
-        200;       % Steady state fx RL
-        200];     % Steady state fx FR
+fxSS = [100;  % Steady state fx FL
+        100;  % Steady state fx FR
+        120;  % Steady state fx RL
+        120]; % Steady state fx FR
+
+% Mode describes the controller type used. Can be:
+%   "stateSpace"
+%   "fuzzy"
+%   "openLoop"
+mode = "fuzzy"; 
+ratio = 0.7;
 
 for i = 1:length(Q(:,1))
     [ExpandedMatrices, steerAngleVector] = helpSetupTheProblem(Q(i, :), R(1));
@@ -74,15 +77,22 @@ for i = 1:length(Q(:,1))
     hWaitBar = waitbar(0, 'Solving ODE...');
     delta = @(t) deltaFunc(t);
     tspan = [a  b];
-    options = odeset('OutputFcn', @(t, Y, flag) vehicleOutputFcn(t, Y, flag, deltaFunc(t), vehicle, steerAngleVector, fxSS, ExpandedMatrices, tspan, hWaitBar), ...
+    % options = odeset('OutputFcn', @(t, Y, flag) vehicleOutputFcn(t, Y, flag, delta, vehicle, steerAngleVector, fxSS, ExpandedMatrices, tspan, hWaitBar, mode), ...
+    %              'Refine', 1, ...              % Increase the refinement level (default is 1)
+    %              'OutputSel', [], ...
+    %              'Stats', 'on');               % Optional: Display solver statistics
+
+    options = odeset('OutputFcn', @(t, Y, flag) vehicleOutputFcn(t, Y, flag, delta, vehicle, steerAngleVector, fxSS, ExpandedMatrices, tspan, hWaitBar, mode,ratio), ...
                  'Refine', 1, ...              % Increase the refinement level (default is 1)
                  'RelTol', 1e-6, ...           % Set a smaller relative tolerance for higher accuracy
                  'AbsTol', 1e-8, ...           % Set a smaller absolute tolerance for higher accuracy
                  'OutputSel', [], ...
                  'Stats', 'on');               % Optional: Display solver statistics
 
+
     % Run the solver
-    [t, Y] = ode45(@(t, Y) nonLinearVehicleModel(t, Y, delta(t), vehicle, steerAngleVector, fxSS, ExpandedMatrices), tspan, Y0, options);
+
+    [t, Y] = ode45(@(t, Y) nonLinearVehicleModel(t, Y, delta, vehicle, steerAngleVector, fxSS, ExpandedMatrices,mode,ratio), tspan, Y0, options);
 
     times = [times struct('times', t)];
 
@@ -92,7 +102,7 @@ for i = 1:length(Q(:,1))
         theseStates.state(:, iStep) = Y(iStep, :);
     end
     stateVectorResults = [stateVectorResults theseStates];
-
+%%
     % Store motor torque commands for all simulations completed
     theseMotorTorques = struct ('FL', zeros(1, length(Y(:,1))),...
                               'FR', zeros(1, length(Y(:,1))),...
@@ -104,7 +114,7 @@ for i = 1:length(Q(:,1))
         theseMotorTorques.RL(iStep) = logData.aux(iStep).MotorTorques.RL;
         theseMotorTorques.RR(iStep) = logData.aux(iStep).MotorTorques.RR;
     end
-
+%%
     % Store slip angles for all simulations completed
     theseSlipAngles = struct ('FL', zeros(1, length(Y(:,1))),...
                               'FR', zeros(1, length(Y(:,1))),...
@@ -223,7 +233,7 @@ xlabel('Time (s)');
 ylabel('Velocity (m/s)');
 grid on;
 
-% Motor torque
+%% Motor torque
 figure;
 fieldNames = string(fieldnames(allMotorTorques));
 for iField = 1:length(fieldNames)
@@ -239,7 +249,7 @@ for iField = 1:length(fieldNames)
     legend show;
     hold off;
 end
-
+%%
 % Wheel angular velocities
 figure;
 for i = 1:4

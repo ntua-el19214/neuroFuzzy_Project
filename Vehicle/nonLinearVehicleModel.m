@@ -1,4 +1,4 @@
-function [x_dot, aux]= nonLinearVehicleModel(t, Y, delta, vehicle, ssVectorSA, fxSS ,ExpandedMatrices)
+function [x_dot, aux]= nonLinearVehicleModel(t, Y, deltaValues, vehicle, ssVectorSA, fxSS ,ExpandedMatrices, mode,ratio)
 % NONLINEARVEHICLEMODEL describes the non-linear equations that dictate vehicle dynamics
 
 % Initialize integral term for yaw control
@@ -26,6 +26,9 @@ disp_y   = Y(10);
 psi      = Y(11);
 
 b = atan(vy/vx);
+
+% Extract steering derivatives and 
+[delta, delta_dot] = deltaValues(t);
 
 % Vehicle geometry and load distribution
 lf = vehicle.wb * (1 - vehicle.wd);
@@ -78,21 +81,31 @@ psi_ddot = (1 / vehicle.Jz) * (lf * ((Fx_fl + Fx_fr) * sin(delta) + (Fy_fl + Fy_
                                lr * (Fy_rl + Fy_rr) + bf / 2 * (-Fx_fl + Fx_fr) * cos(delta) - ...
                                (-Fy_fl + Fy_fr) * sin(delta) + br / 2 * (Fx_rr - Fx_rl));
 
-% Calculate motor torque and wheel accelerations
-psi_dot_desired = sqrt(vx^2 + vy^2) * delta / (lf + lr);
-yaw_error = psi_dot_desired - psi_dot;
+accel = sqrt(vx_dot^2 +vy_dot^2);
 
-gainStruct = gainScheduling(delta, ssVectorSA, ExpandedMatrices);
-input = +yaw_error * gainStruct.Kp + i_error * gainStruct.Ki - gainStruct.Kr * [b; psi_dot] +fxSS;
-% input = yaw_error * gainStruct.Kp + i_error * gainStruct.Ki +fxSS;
+% Calculate motor torque and wheel accelerations
+psi_ddot_desired = 1/vehicle.wb*(accel*delta + sqrt(vx^2 + vy^2)*delta_dot);
+psi_dot_desired  = sqrt(vx^2 + vy^2) * delta / (lf + lr);
+yaw_error        = psi_dot_desired - psi_dot;
+psi_ddot_err     = psi_ddot_desired - psi_ddot;
+
+% Important controller parameters
 slipAngleMatrix = [slipAngle_FL, slipAngle_FR, slipAngle_RL, slipAngle_RR];
 fzMatrix = [Fz_fl, Fz_fr, Fz_rl, Fz_rr];
 omegaMatrix = [omega_FL, omega_FR, omega_RL, omega_RR];
+switch mode 
+    case "stateSpace"
+        gainStruct = gainScheduling(delta, ssVectorSA, ExpandedMatrices);
+        input = yaw_error * gainStruct.Kp + i_error * gainStruct.Ki - gainStruct.Kr * [b; psi_dot] +fxSS;
+        Tmotor = motorTorque(vehicle, input, slipAngleMatrix, fzMatrix, omegaMatrix);
+    case "fuzzy"
+        [Mz, Tmotor]= fuzzyTorqueVectoring(yaw_error, psi_ddot_err, fzMatrix, vehicle, slipAngleMatrix, omegaMatrix, fxSS/vehicle.GR*vehicle.R, ratio);
 
-Tmotor = motorTorque(vehicle, input, slipAngleMatrix, fzMatrix, omegaMatrix);
+    case "openLoop"
+        Tmotor = 200/vehicle.GR*vehicle.R*ones(1,4);
+        Tmotor = Tmotor.*[0.4 0.4 1 1];
 
-% Tmotor = 200/vehicle.GR*vehicle.R*ones(1,4);
-% Tmotor = Tmotor.*[0.1 0.1 1 1];
+end
 
 omega_FL_dot = (Tmotor(1)*vehicle.GR - Fx_fl * vehicle.R - 0.03*Fz_fl) / vehicle.Jw;
 omega_FR_dot = (Tmotor(2)*vehicle.GR - Fx_fr * vehicle.R - 0.03*Fz_fr) / vehicle.Jw;
@@ -120,8 +133,6 @@ aux.Forces = struct('Fx', struct('FL', Fx_fl, 'FR', Fx_fr, 'RL', Fx_rl, 'RR', Fx
                     'Fy', struct('FL', Fy_fl, 'FR', Fy_fr, 'RL', Fy_rl, 'RR', Fy_rr), ...
                     'Fz', struct('FL', Fz_fl, 'FR', Fz_fr, 'RL', Fz_rl, 'RR', Fz_rr));
 aux.MotorTorques = struct('FL', Tmotor(1), 'FR', Tmotor(2), 'RL', Tmotor(3), 'RR', Tmotor(4));
-aux.SlipAngles   = struct('FL', slipAngle_FL, 'FR', slipAngle_FR, 'RL', slipAngle_RL, 'RR', slipAngle_RR);
-aux.SlipRatios   = struct('FL', slip_FL, 'FR', slip_FR, 'RL', slip_RL, 'RR', slip_RR);
 aux.yawError 	 = yaw_error;
 aux.b            = b;
 aux.psiDotTarg   = psi_dot_desired;
