@@ -10,11 +10,11 @@ function [Mz, smoothedTorqueCommand] = fuzzyTorqueVectoring(psi_dot_err, psi_ddo
 
     % Define fuzzy membership functions for psi_dot_err
     psiDotErrMFs = [-0.65, -0.4, -0.2, 0, 0.2, 0.4, 0.65]; % Centers for NB to PB
-    psiDotErrWidth  = 0.10; % Width of each MF
+    psiDotErrWidth  = 0.09; % Width of each MF
     
     % Define fuzzy membership functions for psi_ddot_err
     psiDDotErrMFs = [-8, -5.5, -3, 0, 3, 5.5, 8]; % Centers for NB to PB
-    psiDDotErrWidth  = 1.4; % Width of each MF
+    psiDDotErrWidth  = 0.75; % Width of each MF
     
     % Rule table (Mz output levels): From paper Table I
     ruleBase = [
