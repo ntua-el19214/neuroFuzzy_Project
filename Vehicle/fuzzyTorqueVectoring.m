@@ -1,14 +1,20 @@
-function [Mz, torqueCommand] = fuzzyTorqueVectoring(psi_dot_err, psi_ddot_err, Fz, vehicle, slipAngleMatrix, wheel_omega_array, tSS, ratio)
+function [Mz, smoothedTorqueCommand] = fuzzyTorqueVectoring(psi_dot_err, psi_ddot_err, Fz, vehicle, slipAngleMatrix, wheel_omega_array, tSS, ratio, rampRate)
     % Parameters
-    maxMz = 14; % Maximum yaw moment (Nm)
+    maxMz = 16000; % Maximum yaw moment (Nm)
     
+    % Define persistent variable for previous torque command
+    persistent prevTorqueCommand;
+    if isempty(prevTorqueCommand)
+        prevTorqueCommand = zeros(4, 1); % Initialize to zero for all wheels
+    end
+
     % Define fuzzy membership functions for psi_dot_err
-    psiDotErrMFs = [-1.5, -1.0, -0.5, 0, 0.5, 1.0, 1.5]; % Centers for NB to PB
-    psiDotErrWidth = 0.3; % Width of each MF
+    psiDotErrMFs = [-0.65, -0.4, -0.2, 0, 0.2, 0.4, 0.65]; % Centers for NB to PB
+    psiDotErrWidth  = 0.10; % Width of each MF
     
     % Define fuzzy membership functions for psi_ddot_err
-    psiDDotErrMFs = [-1.5, -1.0, -0.5, 0, 0.5, 1.0, 1.5]; % Centers for NB to PB
-    psiDDotErrWidth = 0.3; % Width of each MF
+    psiDDotErrMFs = [-8, -5.5, -3, 0, 3, 5.5, 8]; % Centers for NB to PB
+    psiDDotErrWidth  = 1.4; % Width of each MF
     
     % Rule table (Mz output levels): From paper Table I
     ruleBase = [
@@ -35,20 +41,26 @@ function [Mz, torqueCommand] = fuzzyTorqueVectoring(psi_dot_err, psi_ddot_err, F
     end
     
     % Torque Vectoring Algorithm: Distribute Mz to four wheels
-    torqueCommand = distributeTorque(Mz, Fz, vehicle, ratio);
+    targetTorqueCommand = distributeTorque(Mz, Fz, vehicle, ratio);
     for iMotor=1:length(wheel_omega_array)
         maxAvailableMotorTorque = vehicle.Motors(wheel_omega_array(iMotor)*vehicle.GR);
-        % maxGripLimitedTorque  = vehicle.TireMaxFx(slipAngleMatrix(iMotor), Fz(iMotor))/vehicle.GR*vehicle.R*0.3;
-        % torqueCommand(iMotor) = min(max(min(torqueCommand(iMotor)+ tSS(iMotor), maxAvailableMotorTorque),0), maxGripLimitedTorque);
-
-        torqueCommand(iMotor) = max(min(torqueCommand(iMotor)+ tSS(iMotor), maxAvailableMotorTorque),0);
+        targetTorqueCommand(iMotor) = max(min(targetTorqueCommand(iMotor)+ tSS(iMotor), maxAvailableMotorTorque),-tSS(iMotor)/4);
     end
-    % disp("psi_dot_err is: "+  string(psi_dot_err))
-    % disp("psi_ddot_err is: "+ string(psi_ddot_err))
-    % disp("Calculate Mz is: "+ string(Mz))
-    % disp("Resulting Wheel Torques are: "+ string(wheelTorques))
-end
     
+    % Apply ramp rate for smooth torque transition
+    smoothedTorqueCommand = prevTorqueCommand; % Initialize with previous torque values
+    for i = 1:length(targetTorqueCommand)
+        delta = targetTorqueCommand(i) - prevTorqueCommand(i);
+        if abs(delta) > rampRate
+            smoothedTorqueCommand(i) = prevTorqueCommand(i) + sign(delta) * rampRate;
+        else
+            smoothedTorqueCommand(i) = targetTorqueCommand(i);
+        end
+    end
+
+    % Update the persistent variable
+    prevTorqueCommand = smoothedTorqueCommand;
+end
 
 function membership = calcMembership(input, centers, width)
     % Gaussian membership function
@@ -56,23 +68,22 @@ function membership = calcMembership(input, centers, width)
     membership = membership / sum(membership); % Normalize
 end
 
-function wheelTorques = distributeTorque(Mz, Fz, vehicle,ratio)
+function wheelTorques = distributeTorque(Mz, Fz, vehicle, ratio)
     % Torque Vectoring Algorithm
-    % Mz = lf * (F_fr - F_fl) + lr * (F_rr - F_rl)
     bf = vehicle.tf; % Front track width (m)
     br = vehicle.tr; % Rear track width (m)
     
-    delta_fx = Mz/(bf+br);
+    delta_fx = Mz / (bf + br);
 
     fz_front = Fz(1) + Fz(2);
     fz_rear  = Fz(3) + Fz(4);
 
-    fx_front = delta_fx*fz_front/sum(Fz)*ratio;
-    fx_rear  = delta_fx*fz_rear/sum(Fz)/ratio;
+    fx_front = delta_fx * fz_front / sum(Fz) * ratio;
+    fx_rear  = delta_fx * fz_rear / sum(Fz) / ratio;
 
     wheelTorques = zeros(4, 1); % [FL, FR, RL, RR]
-    wheelTorques(1) = -fx_front/2*vehicle.GR*vehicle.R;  % FL
-    wheelTorques(2) =  fx_front/2*vehicle.GR*vehicle.R;  % FR
-    wheelTorques(3) = -fx_rear/2*vehicle.GR*vehicle.R;  % RL
-    wheelTorques(4) =  fx_rear/2*vehicle.GR*vehicle.R;  % RR
+    wheelTorques(1) = -fx_front*Fz(1) /fz_front / vehicle.GR * vehicle.R;  % FL
+    wheelTorques(2) = fx_front *Fz(2) /fz_front / vehicle.GR * vehicle.R;  % FR
+    wheelTorques(3) = -fx_rear *Fz(3) /fz_rear / vehicle.GR * vehicle.R;  % RL
+    wheelTorques(4) = fx_rear  *Fz(4) /fz_rear / vehicle.GR * vehicle.R;  % RR
 end

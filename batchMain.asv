@@ -45,16 +45,18 @@ allFyForces   = [];
 allFzForces   = [];
 times = [];
 
-fxSS = [150;  % Steady state fx FL
-        120;  % Steady state fx FR
-        170;  % Steady state fx RL
-        170]; % Steady state fx FR
+fxSS = [100;  % Steady state fx FL
+        100;  % Steady state fx FR
+        120;  % Steady state fx RL
+        120]; % Steady state fx FR
 
 % Mode describes the controller type used. Can be:
 %   "stateSpace"
 %   "fuzzy"
 %   "openLoop"
 mode = "fuzzy"; 
+ratio = 1;
+rampRate = 0.01;
 
 for i = 1:length(Q(:,1))
     [ExpandedMatrices, steerAngleVector] = helpSetupTheProblem(Q(i, :), R(1));
@@ -81,7 +83,7 @@ for i = 1:length(Q(:,1))
     %              'OutputSel', [], ...
     %              'Stats', 'on');               % Optional: Display solver statistics
 
-    options = odeset('OutputFcn', @(t, Y, flag) vehicleOutputFcn(t, Y, flag, delta, vehicle, steerAngleVector, fxSS, ExpandedMatrices, tspan, hWaitBar, mode,ratio), ...
+    options = odeset('OutputFcn', @(t, Y, flag) vehicleOutputFcn(t, Y, flag, delta, vehicle, steerAngleVector, fxSS, ExpandedMatrices, tspan, hWaitBar, mode,ratio, rampRate), ...
                  'Refine', 1, ...              % Increase the refinement level (default is 1)
                  'RelTol', 1e-6, ...           % Set a smaller relative tolerance for higher accuracy
                  'AbsTol', 1e-8, ...           % Set a smaller absolute tolerance for higher accuracy
@@ -90,8 +92,8 @@ for i = 1:length(Q(:,1))
 
 
     % Run the solver
-    ratio = 0.8;
-    [t, Y] = ode45(@(t, Y) nonLinearVehicleModel(t, Y, delta, vehicle, steerAngleVector, fxSS, ExpandedMatrices,mode,ratio), tspan, Y0, options);
+
+    [t, Y] = ode45(@(t, Y) nonLinearVehicleModel(t, Y, delta, vehicle, steerAngleVector, fxSS, ExpandedMatrices,mode,ratio, rampRate), tspan, Y0, options);
 
     times = [times struct('times', t)];
 
@@ -378,3 +380,15 @@ title('Yaw Error Over Time');
 xlabel('Time (s)');
 ylabel('Magnitude');
 legend('show')
+
+% plot yaw acceleration error 
+yawAccError = [logData.aux.psiDDotError];
+figure;
+plot(t(2:end), yawAccError, 'LineWidth', 2, 'DisplayName',"Yaw Accel Error");
+hold on
+plot(t(2:end), yawError, 'LineWidth', 2, 'DisplayName',"Yaw Error");
+title('Yaw Accel Over Time');
+xlabel('Time (s)');
+ylabel('Yaw acc (rad/s^2)');
+legend('show')
+grid on;

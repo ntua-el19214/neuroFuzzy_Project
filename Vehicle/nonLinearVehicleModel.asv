@@ -1,4 +1,4 @@
-function [x_dot, aux]= nonLinearVehicleModel(t, Y, deltaValues, vehicle, ssVectorSA, fxSS ,ExpandedMatrices, mode)
+function [x_dot, aux]= nonLinearVehicleModel(t, Y, deltaValues, vehicle, ssVectorSA, fxSS ,ExpandedMatrices, mode,ratio,rampRate)
 % NONLINEARVEHICLEMODEL describes the non-linear equations that dictate vehicle dynamics
 
 % Initialize integral term for yaw control
@@ -37,13 +37,13 @@ bf = vehicle.tf;
 br = vehicle.tr;
 
 % Calculate normal forces (Fz)
-Fz_fl = vehicle.m * g * vehicle.wd / 2 + (vehicle.CoGz * vehicle.m * ay / (2 * vehicle.tf)) - ...
+Fz_fl = vehicle.m * g * vehicle.wd / 2 - (vehicle.CoGz * vehicle.m * ay / (2 * vehicle.tf)) - ...
         (vehicle.CoGz * vehicle.m * ax / (2 * vehicle.wb)) + 1/2 * 1/4 * 1.22 * vehicle.cl * vx^2;
-Fz_fr = vehicle.m * g * vehicle.wd / 2 - (vehicle.CoGz * vehicle.m * ay / (2 * vehicle.tf)) - ...
+Fz_fr = vehicle.m * g * vehicle.wd / 2 + (vehicle.CoGz * vehicle.m * ay / (2 * vehicle.tf)) - ...
         (vehicle.CoGz * vehicle.m * ax / (2 * vehicle.wb)) + 1/2 * 1/4 * 1.22 * vehicle.cl * vx^2;
-Fz_rl = vehicle.m * g * (1 - vehicle.wd) / 2 + (vehicle.CoGz * vehicle.m * ay / (2 * vehicle.tr)) + ...
+Fz_rl = vehicle.m * g * (1 - vehicle.wd) / 2 - (vehicle.CoGz * vehicle.m * ay / (2 * vehicle.tr)) + ...
         (vehicle.CoGz * vehicle.m * ax / (2 * vehicle.wb)) + 1/2 * 1/4 * 1.22 * vehicle.cl * vx^2;
-Fz_rr = vehicle.m * g * (1 - vehicle.wd) / 2 - (vehicle.CoGz * vehicle.m * ay / (2 * vehicle.tr)) + ...
+Fz_rr = vehicle.m * g * (1 - vehicle.wd) / 2 + (vehicle.CoGz * vehicle.m * ay / (2 * vehicle.tr)) + ...
         (vehicle.CoGz * vehicle.m * ax / (2 * vehicle.wb)) + 1/2 * 1/4 * 1.22 * vehicle.cl * vx^2;
 
 % Calculate slip ratios and slip angles
@@ -99,11 +99,12 @@ switch mode
         input = yaw_error * gainStruct.Kp + i_error * gainStruct.Ki - gainStruct.Kr * [b; psi_dot] +fxSS;
         Tmotor = motorTorque(vehicle, input, slipAngleMatrix, fzMatrix, omegaMatrix);
     case "fuzzy"
-        [Mz, Tmotor]= fuzzyTorqueVectoring(yaw_error, psi_ddot_err, fzMatrix, vehiclen, slipAngleMatrix, omegaMatrix, fxSS );
+        [~, Tmotor]= fuzzyTorqueVectoring(yaw_error, psi_ddot_err, fzMatrix, vehicle, slipAngleMatrix, omegaMatrix,...
+                                           fxSS/vehicle.GR*vehicle.R, ratio, rampRate);
 
     case "openLoop"
-        Tmotor = 200/vehicle.GR*vehicle.R*ones(1,4);
-        Tmotor = Tmotor.*[0.4 0.4 1 1];
+        Tmotor = fxSS/vehicle.GR*vehicle.R*ones(1,4);
+        % Tmotor = Tmotor.*[1 1 1 1];
 
 end
 
@@ -136,5 +137,8 @@ aux.MotorTorques = struct('FL', Tmotor(1), 'FR', Tmotor(2), 'RL', Tmotor(3), 'RR
 aux.yawError 	 = yaw_error;
 aux.b            = b;
 aux.psiDotTarg   = psi_dot_desired;
-
+aux.psiDDotError = psi_ddot_err;
+aux.psi_ddot     = psi_ddot;
+aux.ay           = ay;
+aux.ax           = ax;
 end

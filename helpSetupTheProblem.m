@@ -36,21 +36,21 @@ partial_psi_ddot_Fx_rl = diff(psi_ddot, Fx_rl);
 partial_psi_ddot_Fx_rr = diff(psi_ddot, Fx_rr);
 
 % Display the results
-disp('Partial derivatives of b_dot:');
-disp(['d(b_dot)/d(b) = ', char(partial_b_dot_b)]);
-disp(['d(b_dot)/d(psi_dot) = ', char(partial_b_dot_psi_dot)]);
-disp(['d(b_dot)/d(Fx_fl) = ', char(partial_b_dot_Fx_fl)]);
-disp(['d(b_dot)/d(Fx_fr) = ', char(partial_b_dot_Fx_fr)]);
-disp(['d(b_dot)/d(Fx_rl) = ', char(partial_b_dot_Fx_rl)]);
-disp(['d(b_dot)/d(Fx_rr) = ', char(partial_b_dot_Fx_rr)]);
-
-disp('Partial derivatives of psi_ddot:');
-disp(['d(psi_ddot)/d(b) = ', char(partial_psi_ddot_b)]);
-disp(['d(psi_ddot)/d(psi_dot) = ', char(partial_psi_ddot_psi_dot)]);
-disp(['d(psi_ddot)/d(Fx_fl) = ', char(partial_psi_ddot_Fx_fl)]);
-disp(['d(psi_ddot)/d(Fx_fr) = ', char(partial_psi_ddot_Fx_fr)]);
-disp(['d(psi_ddot)/d(Fx_rl) = ', char(partial_psi_ddot_Fx_rl)]);
-disp(['d(psi_ddot)/d(Fx_rr) = ', char(partial_psi_ddot_Fx_rr)]);
+% disp('Partial derivatives of b_dot:');
+% disp(['d(b_dot)/d(b) = ', char(partial_b_dot_b)]);
+% disp(['d(b_dot)/d(psi_dot) = ', char(partial_b_dot_psi_dot)]);
+% disp(['d(b_dot)/d(Fx_fl) = ', char(partial_b_dot_Fx_fl)]);
+% disp(['d(b_dot)/d(Fx_fr) = ', char(partial_b_dot_Fx_fr)]);
+% disp(['d(b_dot)/d(Fx_rl) = ', char(partial_b_dot_Fx_rl)]);
+% disp(['d(b_dot)/d(Fx_rr) = ', char(partial_b_dot_Fx_rr)]);
+% 
+% disp('Partial derivatives of psi_ddot:');
+% disp(['d(psi_ddot)/d(b) = ', char(partial_psi_ddot_b)]);
+% disp(['d(psi_ddot)/d(psi_dot) = ', char(partial_psi_ddot_psi_dot)]);
+% disp(['d(psi_ddot)/d(Fx_fl) = ', char(partial_psi_ddot_Fx_fl)]);
+% disp(['d(psi_ddot)/d(Fx_fr) = ', char(partial_psi_ddot_Fx_fr)]);
+% disp(['d(psi_ddot)/d(Fx_rl) = ', char(partial_psi_ddot_Fx_rl)]);
+% disp(['d(psi_ddot)/d(Fx_rr) = ', char(partial_psi_ddot_Fx_rr)]);
 
 
 %% Linear System used to design controller.
@@ -187,13 +187,13 @@ for i = 1:5
     end
 
     % Evaluate and display the solution
-    disp(['Operating Point ', num2str(i), ':']);
+    % disp(['Operating Point ', num2str(i), ':']);
     evaluatedSolution = structfun(@(x) subs(x), solution, 'UniformOutput', false);
-    disp(evaluatedSolution);
+    % disp(evaluatedSolution);
 end
 
 % Display the table
-disp(OperatingPointsTable);
+% disp(OperatingPointsTable);
 
 
 %% Set up matrices
@@ -281,13 +281,13 @@ for i = 3:3
 
 
     % Display the results for this operating point
-    disp(['Operating Point ', num2str(i), ':']);
-    disp('A_ex matrix:');
-    disp(A_ex);
-    disp('B_ex matrix:');
-    disp(B_ex);
-    disp('Controller Gain K:');
-    disp(K);
+    % disp(['Operating Point ', num2str(i), ':']);
+    % disp('A_ex matrix:');
+    % disp(A_ex);
+    % disp('B_ex matrix:');
+    % disp(B_ex);
+    % disp('Controller Gain K:');
+    % disp(K);
 end
 
 ExpandedMatrices = ExpandedMatrices(3);

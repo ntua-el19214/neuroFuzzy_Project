@@ -1,4 +1,4 @@
-function status = vehicleOutputFcn(t, Y, flag, delta, vehicle, ssVectorSA, fxSS, ExpandedMatrices, tspan, hWaitBar, mode,ratio)
+function status = vehicleOutputFcn(t, Y, flag, delta, vehicle, ssVectorSA, fxSS, ExpandedMatrices, tspan, hWaitBar, mode,ratio, rampRate)
 persistent logData progress;
 
 switch flag
@@ -11,7 +11,7 @@ switch flag
         progress = (t - tspan(1)) / (tspan(end) - tspan(1));
         waitbar(progress, hWaitBar, sprintf('Progress: %.2f%%', progress * 100));
         % Evaluate the vehicle model to get the auxiliary data
-        [~, aux] = nonLinearVehicleModel(t, Y, delta, vehicle, ssVectorSA, fxSS, ExpandedMatrices, mode,ratio);
+        [~, aux] = nonLinearVehicleModel(t, Y, delta, vehicle, ssVectorSA, fxSS, ExpandedMatrices, mode,ratio, rampRate);
 
         % Append time and auxiliary data
         logData.time = [logData.time; t];
