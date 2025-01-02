@@ -31,7 +31,7 @@ v0 = 12;
 %     50 100 15;
 %     50 100 2.5;
 %     75 150 7.5];
-Q = [5 105 7.5];
+Q = [5 109 7.5];
 
 R = [1];
 
@@ -58,7 +58,7 @@ fxSS = [130;  % Steady state fx FL
 %   "stateSpace"
 %   "fuzzy"
 %   "openLoop"
-mode = ["openLoop", "stateSpace", "fuzzy"]; 
+mode = ["fuzzy"]; 
 ratio = 1;
 rampRate = 0.01;
 
