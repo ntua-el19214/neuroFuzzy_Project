@@ -103,7 +103,11 @@ switch mode
                                            fxSS/vehicle.GR*vehicle.R, ratio, rampRate);
 
     case "openLoop"
-        Tmotor = fxSS/vehicle.GR*vehicle.R*ones(1,4);
+        Fss =    [90; 
+                  90; 
+                  110; 
+                  110];
+         Tmotor  = Fss/vehicle.GR*vehicle.R;
         % Tmotor = Tmotor.*[1 1 1 1];
 
 end

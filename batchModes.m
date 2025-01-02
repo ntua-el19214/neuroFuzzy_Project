@@ -31,7 +31,7 @@ v0 = 12;
 %     50 100 15;
 %     50 100 2.5;
 %     75 150 7.5];
-Q = [5 90 7.5];
+Q = [5 105 7.5];
 
 R = [1];
 
@@ -58,7 +58,7 @@ fxSS = [130;  % Steady state fx FL
 %   "stateSpace"
 %   "fuzzy"
 %   "openLoop"
-mode = ["stateSpace", "fuzzy"]; 
+mode = ["openLoop", "stateSpace", "fuzzy"]; 
 ratio = 1;
 rampRate = 0.01;
 
@@ -239,11 +239,11 @@ figure('Name', 'Velocity Over Time Comparison');
 
 for iPlot = 1:length(mode)
     hold on;
-    for q_idx = 1:length(Q(:,1))
-        % Calculate velocity magnitude for each mode and Q configuration
-        velocity = sqrt(stateVectorResults(q_idx).state(2, :).^2 + stateVectorResults(q_idx).state(3, :).^2);
-        plot(times(q_idx).times, velocity, 'LineWidth', 1.5, 'DisplayName', "Mode: " + mode(iPlot));
-    end
+
+    % Calculate velocity magnitude for each mode and Q configuration
+    velocity = sqrt(stateVectorResults(iPlot).state(2, :).^2 + stateVectorResults(iPlot).state(3, :).^2);
+    plot(times(iPlot).times, velocity, 'LineWidth', 1.5, 'DisplayName', "Mode: " + mode(iPlot));
+
     xlabel('Time (s)');
     ylabel('Velocity (m/s)');
     title(['Velocity Over Time (Mode: ', mode(iPlot), ')']);
@@ -251,7 +251,6 @@ for iPlot = 1:length(mode)
     grid on;
     hold off;
 end
-sgtitle('Vehicle Velocity Over Time for Different Modes');
 
 
 %% Motor torque
@@ -330,7 +329,7 @@ for iField = 1:length(mode)
     ylabel('Yaw Rate Error (rad/s)');
     grid on;
     legend show;
-    fprintf("Absolute Yaw Rate Error for "+ mode(iField)+ " is: %.2f\n", sum(abs([allPsiDotE.(fieldNames(iField))])));
+    fprintf("Absolute Yaw Rate Error for "+ mode(iField)+ " is: %.5f\n", sum(abs([allPsiDotE.(fieldNames(iField))]))/length(allPsiDotE.(fieldNames(iField))));
 end
 hold off;
 

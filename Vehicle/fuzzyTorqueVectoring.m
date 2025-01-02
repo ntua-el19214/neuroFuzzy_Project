@@ -1,6 +1,6 @@
 function [Mz, smoothedTorqueCommand] = fuzzyTorqueVectoring(psi_dot_err, psi_ddot_err, Fz, vehicle, slipAngleMatrix, wheel_omega_array, tSS, ratio, rampRate)
     % Parameters
-    maxMz = 16000; % Maximum yaw moment (Nm)
+    maxMz = 15000; % Maximum yaw moment (Nm)
     
     % Define persistent variable for previous torque command
     persistent prevTorqueCommand;
@@ -13,8 +13,8 @@ function [Mz, smoothedTorqueCommand] = fuzzyTorqueVectoring(psi_dot_err, psi_ddo
     psiDotErrWidth  = 0.09; % Width of each MF
     
     % Define fuzzy membership functions for psi_ddot_err
-    psiDDotErrMFs = [-8, -5.5, -3, 0, 3, 5.5, 8]; % Centers for NB to PB
-    psiDDotErrWidth  = 0.75; % Width of each MF
+    psiDDotErrMFs = [-8.4, -5.7, -3.6, 0, 3.6, 5.7, 8.4]; % Centers for NB to PB
+    psiDDotErrWidth  = 0.74; % Width of each MF
     
     % Rule table (Mz output levels): From paper Table I
     ruleBase = [
@@ -44,7 +44,7 @@ function [Mz, smoothedTorqueCommand] = fuzzyTorqueVectoring(psi_dot_err, psi_ddo
     targetTorqueCommand = distributeTorque(Mz, Fz, vehicle, ratio);
     for iMotor=1:length(wheel_omega_array)
         maxAvailableMotorTorque = vehicle.Motors(wheel_omega_array(iMotor)*vehicle.GR);
-        targetTorqueCommand(iMotor) = max(min(targetTorqueCommand(iMotor)+ tSS(iMotor), maxAvailableMotorTorque),-tSS(iMotor)/4);
+        targetTorqueCommand(iMotor) = max(min(targetTorqueCommand(iMotor)+ tSS(iMotor), maxAvailableMotorTorque),0);
     end
     
     % Apply ramp rate for smooth torque transition
