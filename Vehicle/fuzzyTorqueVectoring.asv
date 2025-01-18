@@ -1,6 +1,6 @@
 function [Mz, smoothedTorqueCommand] = fuzzyTorqueVectoring(psi_dot_err, psi_ddot_err, Fz, vehicle, slipAngleMatrix, wheel_omega_array, tSS, ratio, rampRate)
     % Parameters
-    maxMz = 14000; % Maximum yaw moment (Nm)
+    maxMz = 15200; % Maximum yaw moment (Nm)
     
     % Define persistent variable for previous torque command
     persistent prevTorqueCommand;
@@ -13,7 +13,7 @@ function [Mz, smoothedTorqueCommand] = fuzzyTorqueVectoring(psi_dot_err, psi_ddo
     psiDotErrWidth  = 0.028; % Width of each MF
     
     % Define fuzzy membership functions for psi_ddot_err
-    psiDDotErrMFs = [-8.5, -5.8, -3.95, 0, 3.95, 5.8, 8.5]; % Centers for NB to PB
+    psiDDotErrMFs = [-8.5, -5.8, -3.9, 0, 3.9, 5.8, 8.5]; % Centers for NB to PB
     psiDDotErrWidth  = 0.73; % Width of each MF
     
     % Rule table (Mz output levels): From paper Table I

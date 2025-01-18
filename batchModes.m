@@ -58,7 +58,7 @@ fxSS = [130;  % Steady state fx FL
 %   "stateSpace"
 %   "fuzzy"
 %   "openLoop"
-mode = ["fuzzy"]; 
+mode = ["openLoop", "stateSpace", "fuzzy"]; 
 ratio = 1;
 rampRate = 0.01;
 
