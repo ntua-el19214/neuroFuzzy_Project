@@ -78,8 +78,8 @@ ay = vy_dot;
 
 % ψ_ddot (yaw acceleration)
 psi_ddot = (1 / vehicle.Jz) * (lf * ((Fx_fl + Fx_fr) * sin(delta) + (Fy_fl + Fy_fr) * cos(delta)) - ...
-                               lr * (Fy_rl + Fy_rr) + bf / 2 * (-Fx_fl + Fx_fr) * cos(delta) - ...
-                               (-Fy_fl + Fy_fr) * sin(delta) + br / 2 * (Fx_rr - Fx_rl));
+                               lr * (Fy_rl + Fy_rr) + bf / 2 * ((-Fx_fl + Fx_fr) * cos(delta) - ...
+                               (-Fy_fl + Fy_fr) * sin(delta)) + br / 2 * (Fx_rr - Fx_rl));
 
 accel = sqrt(vx_dot^2 +vy_dot^2);
 

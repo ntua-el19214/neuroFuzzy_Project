@@ -58,7 +58,7 @@ fxSS = [130;  % Steady state fx FL
 %   "stateSpace"
 %   "fuzzy"
 %   "openLoop"
-mode = ["openLoop", "stateSpace", "fuzzy"]; 
+mode = ["openLoop", "stateSpace","fuzzy"]; 
 ratio = 1;
 rampRate = 0.01;
 
@@ -246,7 +246,7 @@ for iPlot = 1:length(mode)
 
     xlabel('Time (s)');
     ylabel('Velocity (m/s)');
-    title(['Velocity Over Time (Mode: ', mode(iPlot), ')']);
+    title('Velocity Over Time' );
     legend show;
     grid on;
     hold off;
@@ -256,13 +256,16 @@ end
 %% Motor torque
 figure;
 fieldNames = string(fieldnames(allMotorTorques));
+names = ["w/o Torque Vectoring", "Torque Vectoring", "Random"];
+sides = ["FL", "FR", "RL", "RR"];
 for iField = 1:length(fieldNames)
     subplot(2, 2, iField);
     hold on;
     for iFigure = 1:length(mode)
-        plot(times(iFigure).times, allMotorTorques(iFigure).(fieldNames(iField))', 'DisplayName', "Trajectory " + mode(iFigure));
+        plot(times(iFigure).times, allMotorTorques(iFigure).(fieldNames(iField))', 'DisplayName',  names(iFigure)...
+            ,'LineWidth', 1.3)
     end
-    title(['Motor Torque - Wheel ', mode(iFigure)]);
+    title(['Motor Torque - Wheel ', sides(iField)]);
     xlabel('Time (s)');
     ylabel('Torque (Nm)');
     grid on;

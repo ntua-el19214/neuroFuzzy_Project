@@ -22,7 +22,7 @@ vehicle.CoGz = 0.3;          % Center of Gravity height (m)
 vehicle.Jz = 100;             % Yaw moment of inertia (kg*m^2)
 vehicle.Jw = 0.2;            % Wheel inertia (kg*m^2)
 vehicle.GR = 15;             % Vehicle gear ratio
-%vehicle.TireMaxFx = maxFxForSaFzCombination();
+% vehicle.TireMaxFx = maxFxForSaFzCombination();
 vehicle.Motors = Motors('AMK-FSAE Motors Data.xlsx');
 
 v0 = 12;
@@ -233,7 +233,7 @@ title('Vehicle Velocity Over Time');
 xlabel('Time (s)');
 ylabel('Velocity (m/s)');
 grid on;
-% 
+%% Debug plots
 % %% Motor torque
 % figure;
 % fieldNames = string(fieldnames(allMotorTorques));
