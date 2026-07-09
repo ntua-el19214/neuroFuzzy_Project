@@ -1,0 +1,22 @@
+# MATLAB autosave / editor cruft
+*.asv
+*.m~
+*.autosave
+
+# Generated MATLAB artifacts — this repo's controller-design outputs are
+# always regenerated at runtime by helpSetupTheProblem.m; none should be committed
+*.mat
+
+# MATLAB codegen / Simulink cache (not currently used, pre-empted)
+codegen/
+slprj/
+sccprj/
+*.slxc
+*.mex*
+
+# OS / editor cruft
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+*.swp

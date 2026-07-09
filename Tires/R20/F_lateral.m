@@ -12,7 +12,8 @@ function [F_psi, Gyk] = F_lateral(SA, SL, FZ, IA)
    	Fz0 = 1112.0554070627252;
 	dfz = (FZ-Fz0)./Fz0;
 	
-    Sh = 0 + 0.*dfz + P(14).*IA;%P(12) + P(13).*dfz + P(14).*IA;
+    % Horizontal/vertical shift terms simplified to drop Fz-dependent components; camber-only shift retained.
+    Sh = 0 + 0.*dfz + P(14).*IA;
     ax = SA + Sh;
 
     C = P(1);
@@ -20,7 +21,7 @@ function [F_psi, Gyk] = F_lateral(SA, SL, FZ, IA)
     E  = (P(5)+P(6).*dfz).*(1-(P(7)+P(8).*IA).*sign(ax));
     Kya = P(9).*Fz0.*sin(2.*atan(FZ./(Fz0.*P(10)))).*(1-P(11).*abs(IA));
     B  = Kya./(C.*D);
-    Sv = FZ.*((0+0.*dfz)+(P(17)+P(18).*dfz).*IA);%FZ.*((P(15)+P(16).*dfz)+(P(17)+P(18).*dfz).*IA);
+    Sv = FZ.*((0+0.*dfz)+(P(17)+P(18).*dfz).*IA);
     
     y = D.*sin(C.*atan(B.*ax-E.*(B.*ax-atan(B.*ax))));
     Y = y + Sv;
@@ -38,7 +39,7 @@ function [Gyk, Svyk] = WeightFun(k,a,fz,ia,j)
     fz0 = 1112.05540706273;
     dfz = (fz-fz0)./fz0;
     Cyk  = p(1); % RCY1
-    Shyk = 0;%p(7) + p(8).*dfz; % RHY1, RHY2
+    Shyk = 0; % simplified: Fz-dependent horizontal shift (RHY1, RHY2) dropped
     ks   = k + Shyk;
     Byk  = p(2).*cos(atan(p(3).*(a-p(4)))); % RBY1, RBY2, RBY3
     Eyk  = p(5)+p(6).*dfz; % REY1, REY2  

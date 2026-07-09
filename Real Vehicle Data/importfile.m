@@ -10,7 +10,7 @@ function PostSeasonTestingP20Marathonas = importfile(filename, dataLines)
 %  scalar integers for dis-contiguous row intervals.
 %
 %  Example:
-%  PostSeasonTestingP20Marathonas = importfile("C:\Uni\Software Engineering\neuroFuzzy_Project\Real Vehicle Data\Post_Season_Testing_P20_Marathonas.csv", [2, Inf]);
+%  PostSeasonTestingP20Marathonas = importfile("Real Vehicle Data/Post_Season_Testing_P20_Marathonas.csv", [2, Inf]);
 %
 %  See also READTABLE.
 %

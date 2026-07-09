@@ -1,4 +1,4 @@
-function [Mz, smoothedTorqueCommand] = fuzzyTorqueVectoring(psi_dot_err, psi_ddot_err, Fz, vehicle, slipAngleMatrix, wheel_omega_array, tSS, ratio, rampRate)
+function [Mz, smoothedTorqueCommand] = fuzzyTorqueVectoring(psi_dot_err, psi_ddot_err, Fz, vehicle, wheel_omega_array, tSS, ratio, rampRate)
 % Parameters
 maxMz = 14000; % Maximum yaw moment (Nm)
 
@@ -8,13 +8,12 @@ if isempty(prevTorqueCommand)
     prevTorqueCommand = zeros(4, 1); % Initialize to zero for all wheels
 end
 
-% Define fuzzy membership functions for psi_dot_err
-psiDotErrMFs = [-0.5, -0.10, -0.04, 0, 0.04, 0.10, 0.5]; % Centers for NB to PB
-psiDotErrWidth  = 0.028; % Width of each MF
-
-% Define fuzzy membership functions for psi_ddot_err
-psiDDotErrMFs = [-8.5, -5.8, -3.95, 0, 3.95, 5.8, 8.5]; % Centers for NB to PB
-psiDDotErrWidth  = 0.73; % Width of each MF
+% Fuzzy membership function parameters, shared with vizMF.m (diagnostic plot)
+mf = fuzzyMFParams();
+psiDotErrMFs    = mf.psiDotErrMFs;
+psiDotErrWidth  = mf.psiDotErrWidth;
+psiDDotErrMFs   = mf.psiDDotErrMFs;
+psiDDotErrWidth = mf.psiDDotErrWidth;
 
 % Rule table (Mz output levels): From paper Table I
 ruleBase = [
@@ -60,12 +59,6 @@ end
 
 % Update the persistent variable
 prevTorqueCommand = smoothedTorqueCommand;
-end
-
-function membership = calcMembership(input, centers, width)
-% Gaussian membership function
-membership = exp(-((input - centers) / width).^2);
-membership = membership / sum(membership); % Normalize
 end
 
 function wheelTorques = distributeTorque(Mz, Fz, vehicle, ratio)

@@ -8,7 +8,8 @@ function [F_chi, Gxa] = F_longit(sa,kappa,Fz,IA)
     Fz0 = 1112.0554070627252; % Fz0 is 250lbs
 	dfz = (Fz-Fz0)./Fz0;	
 		
-	Sh = 0;%P(12) + P(13)*dfz # PHX1, PHX2
+	% Horizontal/vertical shift terms simplified to drop Fz-dependent components.
+	Sh = 0;
     kx = kappa + Sh;
 
 
@@ -17,7 +18,7 @@ function [F_chi, Gxa] = F_longit(sa,kappa,Fz,IA)
     E  = (P(5)+P(6).*dfz+P(7).*dfz.*dfz).*(1-P(8).*sign(kx)); % PEX1,PEX2, PEX3, PEX4
     Kxk = Fz.*(P(9)+P(10).*dfz).*exp(P(11).*dfz); % PKX1, PKX2, PKX3
     B  = Kxk./(C.*D);
-    Sv = 0;%Fz*(p(14)+p(15)*dfz) # PVY1, PVY2
+    Sv = 0;
 
     
     y = D.*sin(C.*atan(B.*kx-E.*(B.*kx-atan(B.*kx))));
@@ -32,7 +33,7 @@ function Gxa = WeightFun(k,a,fz)
 
     fz0     = 1112.05540706273;
     dfz     = (fz-fz0)./fz0;
-    Shxa    = 0;%p(6);
+    Shxa    = 0; % simplified: horizontal shift term (p(6)) dropped
     alpha_s = a + Shxa;
     Cxa     = p(1);
     Bxa     = p(2).*cos(atan(p(3).*k))  ;  

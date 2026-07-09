@@ -1,58 +1,4 @@
 function [ExpandedMatrices, steerAngleVector] = helpSetupTheProblem(Q, ratio)
-% Define symbolic variables
-syms Fx_fl Fx_fr Fx_rl Fx_rr Fy_fl Fy_fr Fy_rl Fy_rr F_Drag D b v psi_dot
-syms m Jz lf lr bf br
-
-% Define the approximations
-% cos_b_approx = 1;  % cos(b) ≈ 1
-% sin_b_approx = b;  % sin(b) ≈ b
-
-% Substitute the approximations in the original equations
-b_dot = (1/m/v) * ((Fx_fl + Fx_fr) * sin(D - b) ...
-                 + (Fy_fl + Fy_fr) * cos(D - b) ...
-                 - (Fx_rl + Fx_rr) * sin(b) ...
-                 + (Fy_rl + Fy_rr) * cos(b) ...
-                 + F_Drag * sin(b) ) - psi_dot;
-
-psi_ddot = (1/Jz) * (lf * ((Fx_fl + Fx_fr) * sin(D) + (Fy_fl + Fy_fr) * cos(D)) ...
-                    - lr * (Fy_rl + Fy_rr) ...
-                    + bf/2 * (-Fx_fl + Fx_fr) * cos(D) ...
-                    - (-Fy_fl + Fy_fr) * sin(D) ...
-                    + br/2 * (Fx_rr - Fx_rl));
-
-% Compute partial derivatives with respect to the specified variables
-partial_b_dot_b = diff(b_dot, b);
-partial_b_dot_psi_dot = diff(b_dot, psi_dot);
-partial_b_dot_Fx_fl = diff(b_dot, Fx_fl);
-partial_b_dot_Fx_fr = diff(b_dot, Fx_fr);
-partial_b_dot_Fx_rl = diff(b_dot, Fx_rl);
-partial_b_dot_Fx_rr = diff(b_dot, Fx_rr);
-
-partial_psi_ddot_b = diff(psi_ddot, b);
-partial_psi_ddot_psi_dot = diff(psi_ddot, psi_dot);
-partial_psi_ddot_Fx_fl = diff(psi_ddot, Fx_fl);
-partial_psi_ddot_Fx_fr = diff(psi_ddot, Fx_fr);
-partial_psi_ddot_Fx_rl = diff(psi_ddot, Fx_rl);
-partial_psi_ddot_Fx_rr = diff(psi_ddot, Fx_rr);
-
-% Display the results
-% disp('Partial derivatives of b_dot:');
-% disp(['d(b_dot)/d(b) = ', char(partial_b_dot_b)]);
-% disp(['d(b_dot)/d(psi_dot) = ', char(partial_b_dot_psi_dot)]);
-% disp(['d(b_dot)/d(Fx_fl) = ', char(partial_b_dot_Fx_fl)]);
-% disp(['d(b_dot)/d(Fx_fr) = ', char(partial_b_dot_Fx_fr)]);
-% disp(['d(b_dot)/d(Fx_rl) = ', char(partial_b_dot_Fx_rl)]);
-% disp(['d(b_dot)/d(Fx_rr) = ', char(partial_b_dot_Fx_rr)]);
-% 
-% disp('Partial derivatives of psi_ddot:');
-% disp(['d(psi_ddot)/d(b) = ', char(partial_psi_ddot_b)]);
-% disp(['d(psi_ddot)/d(psi_dot) = ', char(partial_psi_ddot_psi_dot)]);
-% disp(['d(psi_ddot)/d(Fx_fl) = ', char(partial_psi_ddot_Fx_fl)]);
-% disp(['d(psi_ddot)/d(Fx_fr) = ', char(partial_psi_ddot_Fx_fr)]);
-% disp(['d(psi_ddot)/d(Fx_rl) = ', char(partial_psi_ddot_Fx_rl)]);
-% disp(['d(psi_ddot)/d(Fx_rr) = ', char(partial_psi_ddot_Fx_rr)]);
-
-
 %% Linear System used to design controller.
 % After we obtain the linear form of the system arround,
 % b = 0 we can write the system in the dx/dt = Ax + Bu form
@@ -65,11 +11,13 @@ br = 1.22;
 lf = 0.5*1.57;
 lr = 0.5*1.57;
 Jz = 100;
-F_Drag = 0.5*1.224*1.7*v^2;
+F_Drag = 0.5*1.225*1.7*v^2; % 1.225 = standard air density, kg/m^3
 
 %% Choose Linearization Points
+% Kept for historical provenance: this documents where the 5 operating points'
+% magic numbers (below) came from. Not meant to be re-run every execution.
 % P20_data = importfile('Post_Season_Testing_P20_Marathonas.csv');
-% 
+%
 % AccelY    = smoothdata(P20_data.ACCEL_Y./9.81, 'gaussian', 5);
 % V         = smoothdata(P20_data.GPSSpeedkph/3.6, 'gaussian', 5);
 % steering  = smoothdata(P20_data.Steering/3.74, 'gaussian', 5);
@@ -126,8 +74,13 @@ OperatingPointsTable = table(...
 % Initialize a variable to store solutions
 solutions = cell(1, 5);
 latAcc = 1;
-% Loop through each operating point
-for i = 1:5
+% Loop through each operating point.
+% Only i = 3 (the zero-steering / straight-line operating point) is actually
+% consumed downstream by the Matrices(i)/ExpandedMatrices(i) construction loops
+% below, so this only solves the one design point that matters (avoids 4 wasted
+% symbolic solve() calls). The full OperatingPointsTable above is kept intact
+% since it's cheap and documents the whole design space.
+for i = 3:3
     syms Fx_fl Fx_fr Fx_rl Fx_rr real
     % Extract operating point values
     v = OperatingPointsTable.vSS(i);
@@ -139,8 +92,8 @@ for i = 1:5
         % Fx_rr = 200;
     end
     b = D;
-    F_Drag = 0.5 * 1.224 * 1.7 * v^2;
-    F_Df   = 0.5*1.224*7.2*v^2;
+    F_Drag = 0.5 * 1.225 * 1.7 * v^2; % 1.225 = standard air density, kg/m^3
+    F_Df   = 0.5 * 1.225 * 7.2 * v^2; % 1.225 = standard air density, kg/m^3
     wty    = -sign(D)*latAcc*9.81*m*0.3/((bf+br)/2); % lateral weight transfer
 
     totalFz = F_Df+m*9.81;
@@ -178,8 +131,11 @@ for i = 1:5
         solutions{i}.Fx_fr =double(solution.Fx_fr);
         solutions{i}.Fx_rl =double(solution.Fx_rl);
         solutions{i}.Fx_rr =double(solution.Fx_rr);
-    else 
-        % Maybe solve for actual resistance on the straight.
+    else
+        % D == 0 (straight-line) case: the symbolic system is underdetermined here
+        % (steady-state yaw equilibrium is trivially satisfied for any equal Fx split),
+        % so instead of solving we fall back to a tuned constant approximating the
+        % per-wheel longitudinal force needed to overcome straight-line resistance.
         solutions{i}.Fx_fl = 53.6782;
         solutions{i}.Fx_fr = 53.6782;
         solutions{i}.Fx_rl = 53.6782;
@@ -203,8 +159,8 @@ for i =3:3
     D = OperatingPointsTable.deltaSS(i);
     b = D; % Assuming b = delta as per previous calculations
     psi_dot = v * D / (lf + lr);
-    F_Drag = 0.5 * 1.224 * 2 * v^2;
-    
+    F_Drag = 0.5 * 1.225 * 2 * v^2; % 1.225 = standard air density, kg/m^3
+
     % Solve the equations to find the forces
     solution = solutions{i}; % Obtain the solution for this operating point
 
@@ -261,6 +217,7 @@ for i = 3:3
 
     % Define the weights for the cost function
     Q_mat = diag(Q); % Adjust weights as necessary
+    % R matrix in J = integral( x'Qx + u'Ru ) dt -- control-effort weighting for the LQR design
     R = 0.001 * eye(4); % Adjust R matrix size if needed
 
     % Calculate the controller gain using icare
@@ -271,6 +228,8 @@ for i = 3:3
     frontToRearRatio(1:2, :) = frontToRearRatio(1:2, :).*ratio;
     frontToRearRatio(3:4, :) = frontToRearRatio(3:4, :)./(ratio);
     K = K.*frontToRearRatio;
+    % Fraction of the proportional (Kp) gain shaved off before it's stored in Kr's
+    % second column below -- a tuned damping factor for the yaw-rate feedback term.
     pScaleFactor = 0.70;
     % Store the expanded matrices and controller gain in the structure
     ExpandedMatrices(i).A_ex = A_ex;
@@ -293,18 +252,12 @@ end
 ExpandedMatrices = ExpandedMatrices(3);
 % steerAngleVector = [deltaSS1 deltaSS2 deltaSS3 deltaSS4 deltaSS5];
 steerAngleVector = deltaSS3;
-save("ExpandedMatrices.mat",'ExpandedMatrices')
-save("ssSteerAVector.mat", 'steerAngleVector')
-%% Construct gain scheduling algorith 
+%% Construct gain scheduling algorith
 % This was a test for the algorithm
 % gainStruct = gainScheduling(delta, [OperatingPointsTable.deltaSS(:)], ExpandedMatrices);
 
 %% Next step: Construct a delta steering input to parse into the system
 
-%% Use controller on non linear model (i will perhaps have to make a linear model) 
-
-%% Then do fuzzy lol
-
-%% Maybe try some optimal control method?
+%% Use controller on non linear model (i will perhaps have to make a linear model)
 
 

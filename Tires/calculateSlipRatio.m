@@ -2,7 +2,7 @@ function [SR_FL,SR_FR,SR_RL,SR_RR] = calculateSlipRatio (omega_FL,omega_FR,omega
 
 Rw = vehicle.R;
 tf = vehicle.tf;
-tr = vehicle.tf;
+tr = vehicle.tr;
 
 VxFR = Vx+0.5*yawrate*tf;
 VxFL = Vx-0.5*yawrate*tf;

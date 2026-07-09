@@ -4,7 +4,7 @@ function f = maxFxForSaFzCombination()
 
 %slipRatios = deg2rad(-20:0.05:20);
 slipAngles = deg2rad(-20:0.05:20);
-vertForce  = 150:25:450*4.4482216152605;
+vertForce  = (150:25:450) * 4.4482216152605; % lbf -> N, applied to the whole range (parens fix an operator-precedence bug)
 
 forceMatrix = zeros([length(slipAngles) length(vertForce)]);
 for iSlipAngle= 1:length(slipAngles)

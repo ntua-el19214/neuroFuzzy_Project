@@ -38,13 +38,13 @@ br = vehicle.tr;
 
 % Calculate normal forces (Fz)
 Fz_fl = vehicle.m * g * vehicle.wd / 2 - (vehicle.CoGz * vehicle.m * ay / (2 * vehicle.tf)) - ...
-        (vehicle.CoGz * vehicle.m * ax / (2 * vehicle.wb)) + 1/2 * 1/4 * 1.22 * vehicle.cl * vx^2;
+        (vehicle.CoGz * vehicle.m * ax / (2 * vehicle.wb)) + 1/2 * 1/4 * vehicle.airDensity * vehicle.cl * vx^2;
 Fz_fr = vehicle.m * g * vehicle.wd / 2 + (vehicle.CoGz * vehicle.m * ay / (2 * vehicle.tf)) - ...
-        (vehicle.CoGz * vehicle.m * ax / (2 * vehicle.wb)) + 1/2 * 1/4 * 1.22 * vehicle.cl * vx^2;
+        (vehicle.CoGz * vehicle.m * ax / (2 * vehicle.wb)) + 1/2 * 1/4 * vehicle.airDensity * vehicle.cl * vx^2;
 Fz_rl = vehicle.m * g * (1 - vehicle.wd) / 2 - (vehicle.CoGz * vehicle.m * ay / (2 * vehicle.tr)) + ...
-        (vehicle.CoGz * vehicle.m * ax / (2 * vehicle.wb)) + 1/2 * 1/4 * 1.22 * vehicle.cl * vx^2;
+        (vehicle.CoGz * vehicle.m * ax / (2 * vehicle.wb)) + 1/2 * 1/4 * vehicle.airDensity * vehicle.cl * vx^2;
 Fz_rr = vehicle.m * g * (1 - vehicle.wd) / 2 + (vehicle.CoGz * vehicle.m * ay / (2 * vehicle.tr)) + ...
-        (vehicle.CoGz * vehicle.m * ax / (2 * vehicle.wb)) + 1/2 * 1/4 * 1.22 * vehicle.cl * vx^2;
+        (vehicle.CoGz * vehicle.m * ax / (2 * vehicle.wb)) + 1/2 * 1/4 * vehicle.airDensity * vehicle.cl * vx^2;
 
 % Calculate slip ratios and slip angles
 [slip_FL,slip_FR,slip_RL,slip_RR] = calculateSlipRatio(omega_FL, omega_FR, omega_RL, omega_RR, psi_dot,vx,vehicle);
@@ -68,7 +68,7 @@ Fy_rr = F_lateral(slipAngle_RR, slip_RR, Fz_rr, deg2rad(0));
 % Update the acceleration and beta_dot in the state
 vx_dot = 1 / vehicle.m * ((Fx_fl + Fx_fr)*cos(delta) + Fx_rl + Fx_rr...
                            -(Fy_fl + Fy_fr)*sin(delta)  ...
-                           - 1/2 * 1.224 * vehicle.cd * vx^2) + psi_dot*vy;
+                           - 1/2 * vehicle.airDensity * vehicle.cd * vx^2) + psi_dot*vy;
                             
 ax = vx_dot;
 vy_dot = 1 / vehicle.m * ((Fx_fl + Fx_fr)*sin(delta) ...
@@ -99,7 +99,7 @@ switch mode
         input = yaw_error * gainStruct.Kp + i_error * gainStruct.Ki - gainStruct.Kr * [b; psi_dot] +fxSS;
         Tmotor = motorTorque(vehicle, input, slipAngleMatrix, fzMatrix, omegaMatrix);
     case "fuzzy"
-        [~, Tmotor]= fuzzyTorqueVectoring(yaw_error, psi_ddot_err, fzMatrix, vehicle, slipAngleMatrix, omegaMatrix,...
+        [~, Tmotor]= fuzzyTorqueVectoring(yaw_error, psi_ddot_err, fzMatrix, vehicle, omegaMatrix,...
                                            fxSS/vehicle.GR*vehicle.R, ratio, rampRate);
 
     case "openLoop"
